@@ -1,0 +1,13 @@
+<Project>
+    <PropertyGroup>
+        <MajorVersion Condition=" '$(MajorVersion)' == '' ">0</MajorVersion>
+        <MinorVersion Condition=" '$(MinorVersion)' == '' ">0</MinorVersion>
+        <PatchVersion Condition=" '$(PatchVersion)' == '' ">0</PatchVersion>
+
+        <Version>$(MajorVersion).$(MinorVersion).$(PatchVersion)</Version>
+    </PropertyGroup>
+    <PropertyGroup Condition=" '$(PreReleaseLabel)' != '' ">
+        <PreReleaseVersion Condition=" '$(PreReleaseVersion)' == '' ">0</PreReleaseVersion>
+        <Version>$(Version)-$(PreReleaseLabel).$(PreReleaseVersion)</Version>
+    </PropertyGroup>
+</Project>
