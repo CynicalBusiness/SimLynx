@@ -2,41 +2,35 @@
 using Autofac;
 using Microsoft.Extensions.Logging;
 using SimLynx.Core;
-using SimLynx.Core.States;
 using SimLynx.Design;
+using SimLynx.Discovery;
+using SimLynx.Simulation;
 
 namespace SimLynx;
 
 /// <summary>
 /// The main SimLynx Autofac module.
 /// </summary>
-public class SimLynxModule : Module
+public class SimLynxModule<TApp> : Module
+    where TApp : SimLynxApp
 {
+
     /// <inheritdoc />
     protected override void Load(ContainerBuilder builder)
     {
-        builder.RegisterType<SimLynxHost>()
-            .AsSelf()
-            .SingleInstance();
-
-        // states
-        builder.RegisterGeneric(typeof(StateType<>))
-            .AsSelf()
-            .SingleInstance();
-        builder.RegisterType<StateTypeResolver>()
-            .AsSelf()
-            .SingleInstance();
-
-        // design
-        builder.RegisterType<DesignRegister>()
-            .AsSelf()
-            .SingleInstance();
-
-        // runtime
-        builder.RegisterType<RuntimeRegister>()
-            .AsSelf()
-            .SingleInstance();
-
         base.Load(builder);
+
+        builder.RegisterModule<LoggingModule>()
+            .IfNotRegistered(typeof(ILogger));
+
+        builder.RegisterType<TApp>()
+            .AsSelf()
+            .As<SimLynxApp>()
+            .AsImplementedInterfaces()
+            .SingleInstance();
+
+        builder.RegisterModule<DiscoveryModule>();
+        builder.RegisterModule<DesignModule>();
+        builder.RegisterModule<SimulationModule>();
     }
 }

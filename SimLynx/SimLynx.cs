@@ -1,9 +1,9 @@
 
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
-using Autofac.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection;
+using Autofac.Core.Registration;
 
 namespace SimLynx;
 
@@ -12,49 +12,38 @@ namespace SimLynx;
 /// </summary>
 public static class SimLynx
 {
+    /// <summary>
+    /// Registers the SimLynx services with the given container builder, using a new <typeparamref name="TApp"/> instance.
+    /// </summary>
+    /// <typeparam name="TApp">The type of the SimLynx app.</typeparam>
+    /// <param name="builder">The container builder.</param>
+    /// <returns>The module registrar.</returns>
+    public static IModuleRegistrar RegisterSimLynx<TApp>(this ContainerBuilder builder)
+        where TApp : SimLynxApp
+    {
+        return builder.RegisterModule<SimLynxModule<TApp>>()
+            .IfNotRegistered(typeof(SimLynxApp));
+    }
 
     /// <summary>
-    /// Runs the given SimLynx application in self-contained mode, starting the simulation and returning a task that
-    /// completes when the simulation stops.
+    /// Runs a new self-contained SimLynx app instance.
     /// </summary>
-    /// <remarks>
-    /// This method is the most common approach to starting SimLynx and should be used when no other dependency
-    /// injection container is being used.
-    /// </remarks>
-    /// <param name="app">The SimLynx application to run.</param>
-    /// <param name="cancellationToken">The cancellation token to stop the simulation.</param>
-    /// <returns>A task that completes when the simulation stops.</returns>
-    public static async Task RunAsync<TApp>(TApp app, CancellationToken cancellationToken = default)
-        where TApp : SimLynxApplication
+    /// <typeparam name="TApp">The type of the SimLynx app.</typeparam>
+    /// <param name="configureContainer">An optional action to configure the container before it is built.</param>
+    /// <param name="cancellationToken">A cancellation token that can be used to stop the app.</param>
+    /// <returns>A task that represents the lifetime of the app.</returns>
+    public static async Task Run<TApp>(
+        Action<ContainerBuilder>? configureContainer = null,
+        CancellationToken cancellationToken = default)
+            where TApp : SimLynxApp
     {
-        var services = new ServiceCollection();
-        services.AddLogging();
-        app.AddServices(services);
-
         var builder = new ContainerBuilder();
-        builder.Populate(services);
-        builder.RegisterModule(app);
+        builder.RegisterSimLynx<TApp>();
+        configureContainer?.Invoke(builder);
+        using var container = builder.Build();
 
-        await using var container = builder.Build();
-        var host = container.Resolve<SimLynxHost>();
-        app.ConfigureHost(host);
-
-        await host.StartAsync(cancellationToken);
-    }
-
-    /// <inheritdoc cref="RunAsync{TApp}(TApp, CancellationToken)"/>
-    public static Task RunAsync<TApp>(out TApp app, CancellationToken cancellationToken = default)
-        where TApp : SimLynxApplication, new()
-    {
-        app = new TApp();
-        return RunAsync(app, cancellationToken);
-    }
-
-    /// <inheritdoc cref="RunAsync{TApp}(TApp, CancellationToken)"/>
-    public static Task RunAsync<TApp>(CancellationToken cancellationToken = default)
-        where TApp : SimLynxApplication, new()
-    {
-        return RunAsync<TApp>(out _, cancellationToken);
+        var app = container.Resolve<TApp>();
+        await app.RunAsync(cancellationToken);
     }
 
 }

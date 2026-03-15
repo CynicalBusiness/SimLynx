@@ -9,12 +9,13 @@ using Microsoft.Extensions.Logging;
 namespace SimLynx;
 
 /// <summary>
-/// A symbolic identifier, used to identify objects with name-like objects, but with better performance than strings.
+/// A symbolic identifier, used to identify objects with name-like objects, but with better performance than strings
+/// for equality checks and dictionary lookups. Symbols are immutable and can be quickly compared for equality by-value.
 /// <br/>
 /// This type works similarly to JavaScript Symbols, coming in two varieties:
 /// <list type="bullet">
-///     <item><term>Named</term><description>Two symbols created with the same name are considered equal.</description></item>
-///     <item><term>Unique</term><description>Each symbol is unique, even if created with the same name.</description></item>
+///     <item><term>Named</term> <description>Two symbols created with the same name are considered equal.</description></item>
+///     <item><term>Unique</term> <description>Each symbol is unique, even if created with the same name.</description></item>
 /// </list>
 /// </summary>
 public readonly struct Symbol : IEquatable<Symbol>
