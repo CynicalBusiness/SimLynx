@@ -5,9 +5,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
+using Semver;
 using SimLynx.Core.Phasing;
 using SimLynx.Design;
 using SimLynx.Discovery;
+using SimLynx.Discovery.Content;
 using SimLynx.Simulation;
 
 namespace SimLynx;
@@ -20,12 +22,24 @@ namespace SimLynx;
 /// For most use-cases, your main application class should extend from this class.
 /// <br/>
 /// </remarks>
-public abstract class SimLynxApp(
-    ILifetimeScope scope) :
+public abstract class SimLynxApp :
+        IContentPackage,
         IDiscoveryRegistrationProvider,
         IDesignRegistrationProvider,
         ISimulationRegistrationProvider
 {
+
+    /// <summary>
+    /// Initializes a new app instance.
+    /// </summary>
+    protected SimLynxApp(ILifetimeScope scope)
+    {
+        Scope = scope;
+        Manifest = CreateContentManifest();
+    }
+
+    /// <inheritdoc/>
+    public ContentPackageManifest Manifest { get; }
 
     /// <summary>
     /// Configuration of phases the application will run, in order.
@@ -42,7 +56,7 @@ public abstract class SimLynxApp(
     /// <summary>
     /// The Autofac scope for this application.
     /// </summary>
-    protected ILifetimeScope Scope { get; } = scope;
+    protected ILifetimeScope Scope { get; }
 
     /// <summary>
     /// Runs the application, returning a task that represents its lifetime. The returned task should complete when the
@@ -88,6 +102,24 @@ public abstract class SimLynxApp(
     protected virtual IPhaseManager GetInitialPhaseManager()
     {
         return Scope.Resolve<DiscoveryPhaseManager>();
+    }
+
+    /// <summary>
+    /// Override to customize the internal content manifest for the main app.
+    /// </summary>
+    /// <returns>The content package manifest.</returns>
+    protected virtual ContentPackageManifest CreateContentManifest()
+    {
+        var thisType = GetType();
+        var thisAssemblyVersion = thisType.Assembly.GetName().Version;
+
+        return new ContentPackageManifest()
+        {
+            Id = thisType.Namespace ?? thisType.Name,
+            Version = thisAssemblyVersion is not null
+                ? SemVersion.FromVersion(thisAssemblyVersion)
+                : new SemVersion(0, 0, 1)
+        };
     }
 
 }
