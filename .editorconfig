@@ -11,5 +11,11 @@ charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
 
+[*.cs]
+max_line_length = 120
+
+# IDE0055: Fix formatting (conflicts with CSharpier)
+dotnet_diagnostic.IDE0055.severity = none
+
 # CA1816: Dispose methods should call SuppressFinalize
 dotnet_diagnostic.CA1816.severity = silent

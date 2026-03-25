@@ -1,4 +1,3 @@
-
 using System.Reflection;
 
 namespace SimLynx.Core.Prototyping;
@@ -10,10 +9,8 @@ namespace SimLynx.Core.Prototyping;
 /// <param name="Property">The reflection information about the property.</param>
 public record PrototypeProperty(IPrototypeInfo Prototype, PropertyInfo Property)
 {
-
     /// <summary>
     /// Whether this property is required to be configured for the prototype to be valid.
     /// </summary>
     public bool IsRequired => Property.IsRequired;
-
 }

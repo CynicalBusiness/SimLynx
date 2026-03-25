@@ -1,4 +1,3 @@
-
 using Semver;
 
 namespace SimLynx.Discovery.Content;
@@ -8,7 +7,6 @@ namespace SimLynx.Discovery.Content;
 /// </summary>
 public static class ContentExtensions
 {
-
     extension(IContentPackage pkg)
     {
         /// <summary>
@@ -21,5 +19,4 @@ public static class ContentExtensions
         /// </summary>
         public SemVersion Version => pkg.Manifest.Version;
     }
-
 }

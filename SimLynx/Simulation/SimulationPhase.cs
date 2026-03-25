@@ -1,4 +1,3 @@
-
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -13,8 +12,8 @@ namespace SimLynx.Simulation;
 /// </summary>
 public class SimulationPhase(
     IEnumerable<ISimulationService> simulationServices,
-    IIndex<Symbol, IPhaseManager> phaseManagers)
-    : Phase(phaseManagers)
+    IIndex<Symbol, IPhaseManager> phaseManagers
+) : Phase(phaseManagers)
 {
     /// <summary>
     /// ID of the phase, used for keying dependencies.
@@ -24,7 +23,6 @@ public class SimulationPhase(
     /// <inheritdoc/>
     protected override Task RunAsync(CancellationToken cancellationToken)
     {
-        return Task.WhenAll(simulationServices
-            .Select(s => s.RunSimulationAsync(cancellationToken)));
+        return Task.WhenAll(simulationServices.Select(s => s.RunSimulationAsync(cancellationToken)));
     }
 }

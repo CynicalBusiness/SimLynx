@@ -1,4 +1,3 @@
-
 using Autofac;
 using Microsoft.Extensions.Logging;
 using SimLynx.Core;
@@ -14,20 +13,14 @@ namespace SimLynx;
 public class SimLynxModule<TApp> : Module
     where TApp : SimLynxApp
 {
-
     /// <inheritdoc />
     protected override void Load(ContainerBuilder builder)
     {
         base.Load(builder);
 
-        builder.RegisterModule<LoggingModule>()
-            .IfNotRegistered(typeof(ILogger));
+        builder.RegisterModule<LoggingModule>().IfNotRegistered(typeof(ILogger));
 
-        builder.RegisterType<TApp>()
-            .AsSelf()
-            .As<SimLynxApp>()
-            .AsImplementedInterfaces()
-            .SingleInstance();
+        builder.RegisterType<TApp>().AsSelf().As<SimLynxApp>().AsImplementedInterfaces().SingleInstance();
 
         builder.RegisterModule<DiscoveryModule>();
         builder.RegisterModule<DesignModule>();

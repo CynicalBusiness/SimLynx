@@ -1,4 +1,3 @@
-
 using System;
 
 namespace SimLynx.Core;
@@ -12,12 +11,10 @@ namespace SimLynx.Core;
 /// </remarks>
 public interface ITypeInfo
 {
-
     /// <summary>
     /// The underlying system type this type info represents.
     /// </summary>
     public Type Type { get; }
-
 }
 
 /// <summary>
@@ -31,7 +28,4 @@ public interface ITypeInfo
 /// </remarks>
 /// <typeparam name="TType">The type this type info represents, or a type is is otherwise assignable to.</typeparam>
 public interface ITypeInfo<out TType> : ITypeInfo
-    where TType : notnull
-{
-
-}
+    where TType : notnull { }

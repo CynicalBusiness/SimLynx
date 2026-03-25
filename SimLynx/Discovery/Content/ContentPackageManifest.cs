@@ -1,4 +1,3 @@
-
 using Semver;
 
 namespace SimLynx.Discovery.Content;
@@ -10,7 +9,6 @@ namespace SimLynx.Discovery.Content;
 /// </summary>
 public record ContentPackageManifest
 {
-
     /// <summary>
     /// The fully-qualified identifier of the content package.
     /// <br/>
@@ -22,5 +20,4 @@ public record ContentPackageManifest
     /// The version of the content package.
     /// </summary>
     public required SemVersion Version { get; init; }
-
 }

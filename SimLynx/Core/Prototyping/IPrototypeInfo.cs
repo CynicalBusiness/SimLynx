@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -10,7 +9,6 @@ namespace SimLynx.Core.Prototyping;
 /// </summary>
 public interface IPrototypeInfo : ITypeInfo
 {
-
     /// <summary>
     /// Gets the property with the given name, if it exists in this prototype type's properties, including inherited
     /// properties from base prototype types.
@@ -43,7 +41,6 @@ public interface IPrototypeInfo : ITypeInfo
     /// <param name="property">When this method returns, contains the property with the specified name, if it exists; otherwise, <c>null</c>.</param>
     /// <returns><c>true</c> if the property exists; otherwise, <c>false</c>.</returns>
     public bool TryGetProperty(string name, [NotNullWhen(true)] out PrototypeProperty? property);
-
 }
 
 /// <summary>
@@ -53,7 +50,6 @@ public interface IPrototypeInfo : ITypeInfo
 public interface IPrototypeInfo<out TType> : IPrototypeInfo, ITypeInfo<TType>
     where TType : class, IPrototype
 {
-
     /// <summary>
     /// Function responsible for creating an instance of the prototype type this represents.
     /// </summary>
@@ -67,5 +63,4 @@ public interface IPrototypeInfo<out TType> : IPrototypeInfo, ITypeInfo<TType>
     [MemberNotNullWhen(false, nameof(CreateInstance))]
     public new bool IsAbstract => CreateInstance is null;
     bool IPrototypeInfo.IsAbstract => IsAbstract;
-
 }

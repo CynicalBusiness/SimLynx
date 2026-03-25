@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -13,14 +12,11 @@ internal class PrototypeInfo<TBaseType, TType> : IPrototypeInfo<TType>
     where TBaseType : class, IPrototype
     where TType : class, TBaseType
 {
-
     private static ImmutableDictionary<string, PrototypeProperty> GetProperties(IPrototypeInfo prototypeInfo)
     {
         var propInfos = typeof(TType).GetProperties(
-            BindingFlags.Instance
-            | BindingFlags.DeclaredOnly
-            | BindingFlags.Public
-            | BindingFlags.NonPublic);
+            BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic
+        );
 
         return propInfos
             .Where(p =>
@@ -39,7 +35,6 @@ internal class PrototypeInfo<TBaseType, TType> : IPrototypeInfo<TType>
                 return attr.IsConfigurable;
             })
             .ToImmutableDictionary(p => p.Name, p => new PrototypeProperty(prototypeInfo, p));
-
     }
 
     private static Func<TType>? GetConstructorFunc(Type type)
@@ -82,9 +77,7 @@ internal class PrototypeInfo<TBaseType, TType> : IPrototypeInfo<TType>
         get
         {
             var extends = BaseTypeInfo?.Properties ?? [];
-            return extends
-                .Where((p) => !OwnProperties.ContainsKey(p.Property.Name))
-                .Concat(OwnProperties.Values);
+            return extends.Where((p) => !OwnProperties.ContainsKey(p.Property.Name)).Concat(OwnProperties.Values);
         }
     }
 
@@ -102,5 +95,4 @@ internal class PrototypeInfo<TBaseType, TType> : IPrototypeInfo<TType>
 
         return false;
     }
-
 }

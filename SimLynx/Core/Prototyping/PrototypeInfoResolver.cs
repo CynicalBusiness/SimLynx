@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -11,7 +10,6 @@ namespace SimLynx.Core.Prototyping;
 public class PrototypeInfoResolver<TPrototype>
     where TPrototype : class, IPrototype
 {
-
     private readonly Dictionary<Type, IPrototypeInfo<TPrototype>> _typeInfos = [];
     private readonly ReaderWriterLockSlim _lock = new();
 
@@ -41,7 +39,8 @@ public class PrototypeInfoResolver<TPrototype>
         {
             throw new ArgumentException(
                 $"Type '{defType.FullName}' is not a class assignable to '{typeof(TPrototype).FullName}'",
-                nameof(defType));
+                nameof(defType)
+            );
         }
 
         _lock.EnterUpgradeableReadLock();
@@ -66,7 +65,6 @@ public class PrototypeInfoResolver<TPrototype>
         {
             _lock.ExitUpgradeableReadLock();
         }
-
     }
 
     /// <inheritdoc cref="Get(Type)"/>
@@ -97,5 +95,4 @@ public class PrototypeInfoResolver<TPrototype>
         _typeInfos[defType] = typeInfo;
         return typeInfo;
     }
-
 }

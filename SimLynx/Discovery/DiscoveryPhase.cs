@@ -1,4 +1,3 @@
-
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -14,8 +13,8 @@ namespace SimLynx.Discovery;
 /// </summary>
 public class DiscoveryPhase(
     IEnumerable<IDiscoveryService> discoveryServices,
-    IIndex<Symbol, IPhaseManager> phaseManagers)
-    : Phase(phaseManagers)
+    IIndex<Symbol, IPhaseManager> phaseManagers
+) : Phase(phaseManagers)
 {
     /// <summary>
     /// ID of the phase, used for keying dependencies.
@@ -25,7 +24,6 @@ public class DiscoveryPhase(
     /// <inheritdoc/>
     protected override Task RunAsync(CancellationToken cancellationToken)
     {
-        return Task.WhenAll(discoveryServices
-            .Select(s => s.RunDiscoveryAsync(cancellationToken)));
+        return Task.WhenAll(discoveryServices.Select(s => s.RunDiscoveryAsync(cancellationToken)));
     }
 }

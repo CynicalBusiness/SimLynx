@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -100,9 +99,11 @@ public readonly struct Symbol : IEquatable<Symbol>
         }
         if (name.Length > MAX_NAME_LENGTH)
         {
-            throw new ArgumentException($"Symbol name exceeds maximum length of {MAX_NAME_LENGTH} characters.", nameof(name));
+            throw new ArgumentException(
+                $"Symbol name exceeds maximum length of {MAX_NAME_LENGTH} characters.",
+                nameof(name)
+            );
         }
-
         unchecked
         {
             // https://mojoauth.com/hashing/fast-hash-in-c/
@@ -192,5 +193,4 @@ public readonly struct Symbol : IEquatable<Symbol>
     {
         return Value;
     }
-
 }

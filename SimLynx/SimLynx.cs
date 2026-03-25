@@ -1,4 +1,3 @@
-
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,8 +20,7 @@ public static class SimLynx
     public static IModuleRegistrar RegisterSimLynx<TApp>(this ContainerBuilder builder)
         where TApp : SimLynxApp
     {
-        return builder.RegisterModule<SimLynxModule<TApp>>()
-            .IfNotRegistered(typeof(SimLynxApp));
+        return builder.RegisterModule<SimLynxModule<TApp>>().IfNotRegistered(typeof(SimLynxApp));
     }
 
     /// <summary>
@@ -34,8 +32,9 @@ public static class SimLynx
     /// <returns>A task that represents the lifetime of the app.</returns>
     public static async Task Run<TApp>(
         Action<ContainerBuilder>? configureContainer = null,
-        CancellationToken cancellationToken = default)
-            where TApp : SimLynxApp
+        CancellationToken cancellationToken = default
+    )
+        where TApp : SimLynxApp
     {
         var builder = new ContainerBuilder();
         builder.RegisterSimLynx<TApp>();
@@ -45,5 +44,4 @@ public static class SimLynx
         var app = container.Resolve<TApp>();
         await app.RunAsync(cancellationToken);
     }
-
 }

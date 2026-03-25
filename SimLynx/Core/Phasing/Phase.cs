@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -37,9 +36,7 @@ public abstract class Phase(IIndex<Symbol, IPhaseManager> phaseManagers) : IPhas
         if (phasePlan is not null && phasePlan.Length > 0)
         {
             nextPhaseId = phasePlan[0];
-            nextPhasePlan = phasePlan.Length > 1
-                ? phasePlan[1..]
-                : null;
+            nextPhasePlan = phasePlan.Length > 1 ? phasePlan[1..] : null;
         }
 
         if (nextPhaseId is not null)

@@ -1,4 +1,3 @@
-
 namespace SimLynx;
 
 /// <summary>
@@ -7,10 +6,8 @@ namespace SimLynx;
 /// </summary>
 public class Stage(Symbol name)
 {
-
     /// <summary>
     /// The name of the stage.
     /// </summary>
     public Symbol Name { get; } = name;
-
 }

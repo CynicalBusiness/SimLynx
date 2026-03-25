@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,13 +21,12 @@ namespace SimLynx;
 /// For most use-cases, your main application class should extend from this class.
 /// <br/>
 /// </remarks>
-public abstract class SimLynxApp :
-        IContentPackage,
+public abstract class SimLynxApp
+    : IContentPackage,
         IDiscoveryRegistrationProvider,
         IDesignRegistrationProvider,
         ISimulationRegistrationProvider
 {
-
     /// <summary>
     /// Initializes a new app instance.
     /// </summary>
@@ -47,11 +45,8 @@ public abstract class SimLynxApp :
     /// By default, this will run the Discovery, Design, then Simulation phases, but can be modified to adjust
     /// behavior, such as introducing new phases.
     /// </summary>
-    protected List<Symbol> PhasePlan { get; set; } = [
-        DiscoveryPhase.PhaseId,
-        DesignPhase.PhaseId,
-        SimulationPhase.PhaseId
-    ];
+    protected List<Symbol> PhasePlan { get; set; } =
+    [DiscoveryPhase.PhaseId, DesignPhase.PhaseId, SimulationPhase.PhaseId];
 
     /// <summary>
     /// The Autofac scope for this application.
@@ -118,8 +113,7 @@ public abstract class SimLynxApp :
             Id = thisType.Namespace ?? thisType.Name,
             Version = thisAssemblyVersion is not null
                 ? SemVersion.FromVersion(thisAssemblyVersion)
-                : new SemVersion(0, 0, 1)
+                : new SemVersion(0, 0, 1),
         };
     }
-
 }

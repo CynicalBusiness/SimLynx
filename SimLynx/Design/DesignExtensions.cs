@@ -1,4 +1,3 @@
-
 using Autofac.Builder;
 
 namespace SimLynx.Design;
@@ -8,10 +7,10 @@ namespace SimLynx.Design;
 /// </summary>
 public static class DesignExtensions
 {
-
-    extension<TLimit, TActivatorData, TRegistrationStyle>(IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> builder)
+    extension<TLimit, TActivatorData, TRegistrationStyle>(
+        IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> builder
+    )
     {
-
         /// <summary>
         /// Configures the registration to be a design instance, meaning it will be shared within the design phase but not outside of it.
         /// </summary>
@@ -20,7 +19,5 @@ public static class DesignExtensions
         {
             return builder.InstancePerOwned<DesignPhase>();
         }
-
     }
-
 }

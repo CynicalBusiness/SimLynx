@@ -1,4 +1,3 @@
-
 using System.Collections.Generic;
 using Autofac;
 using SimLynx.Core.Phasing;
@@ -8,12 +7,9 @@ namespace SimLynx.Design;
 /// <summary>
 /// Phase manager for the <see cref="DesignPhase"/>.
 /// </summary>
-public class DesignPhaseManager(
-    ILifetimeScope scope,
-    IEnumerable<IDesignRegistrationProvider> designProviders)
+public class DesignPhaseManager(ILifetimeScope scope, IEnumerable<IDesignRegistrationProvider> designProviders)
     : PhaseManager<DesignPhase>(scope)
 {
-
     /// <inheritdoc/>
     protected override void ConfigureContainer(ContainerBuilder builder)
     {
@@ -24,5 +20,4 @@ public class DesignPhaseManager(
             provider.ConfigureDesign(builder);
         }
     }
-
 }

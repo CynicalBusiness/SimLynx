@@ -1,4 +1,3 @@
-
 using System;
 
 namespace SimLynx.Core.Prototyping;
@@ -8,10 +7,8 @@ namespace SimLynx.Core.Prototyping;
 /// </summary>
 public interface IPrototype
 {
-
     /// <summary>
     /// The ID of this prototype.
     /// </summary>
     public Symbol Id { get; }
-
 }

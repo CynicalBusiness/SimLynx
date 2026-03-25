@@ -1,4 +1,3 @@
-
 using System;
 using System.Diagnostics.CodeAnalysis;
 
@@ -16,8 +15,7 @@ public class TypeException : Exception
     /// <param name="type">The type that caused the exception.</param>
     /// <param name="expectedType">The expected type that was not met by the type.</param>
     /// <returns>A new <see cref="TypeException"/> instance.</returns>
-    public static TypeException NotAssignable(Type type, Type expectedType)
-        => new(type, expectedType);
+    public static TypeException NotAssignable(Type type, Type expectedType) => new(type, expectedType);
 
     /// <summary>
     /// Creates a new type exception indicating that the specified <paramref name="type"/> is not
@@ -26,9 +24,7 @@ public class TypeException : Exception
     /// <typeparam name="TExpected">The expected type that was not met by the type.</typeparam>
     /// <param name="type">The type that caused the exception.</param>
     /// <returns>A new <see cref="TypeException"/> instance.</returns>
-    public static TypeException NotAssignable<TExpected>(Type type)
-        => NotAssignable(type, typeof(TExpected));
-
+    public static TypeException NotAssignable<TExpected>(Type type) => NotAssignable(type, typeof(TExpected));
 
     /// <summary>
     /// Throws a <see cref="TypeException"/> if the specified <paramref name="type"/> is not assignable to the
@@ -44,10 +40,7 @@ public class TypeException : Exception
         {
             throw string.IsNullOrWhiteSpace(paramName)
                 ? NotAssignable(type, expectedType)
-                : new ArgumentException(
-                    $"Provided type is not valid.",
-                    paramName,
-                    NotAssignable(type, expectedType));
+                : new ArgumentException($"Provided type is not valid.", paramName, NotAssignable(type, expectedType));
         }
     }
 
@@ -116,8 +109,7 @@ public class TypeException : Exception
     /// </summary>
     /// <param name="message">The error message that explains the reason for the exception.</param>
     public TypeException(string message)
-        : base(message)
-    { }
+        : base(message) { }
 
     /// <summary>
     /// Creates a new type exception with the specified <paramref name="message"/> and <paramref name="inner"/> exception.
@@ -125,8 +117,7 @@ public class TypeException : Exception
     /// <param name="message">The error message that explains the reason for the exception.</param>
     /// <param name="inner">The exception that is the cause of the current exception.</param>
     public TypeException(string message, Exception inner)
-        : base(message, inner)
-    { }
+        : base(message, inner) { }
 
     /// <summary>
     /// Creates a new type exception for the specified <paramref name="type"/> and <paramref name="expectation"/>.
@@ -134,8 +125,7 @@ public class TypeException : Exception
     /// <param name="type">The type that caused the exception.</param>
     /// <param name="expectation">The expectation that was not met by the type.</param>
     public TypeException(Type type, string expectation)
-        : base($"Expected that type '{type.FullName}' {expectation}")
-    { }
+        : base($"Expected that type '{type.FullName}' {expectation}") { }
 
     /// <summary>
     /// Creates a new type exception for the specified <paramref name="type"/> and <paramref name="expectedType"/>.
@@ -143,6 +133,5 @@ public class TypeException : Exception
     /// <param name="type">The type that caused the exception.</param>
     /// <param name="expectedType">The expected type that was not met by the type.</param>
     public TypeException(Type type, Type expectedType)
-        : this(type, $"is assignable to type '{expectedType.FullName}'")
-    { }
+        : this(type, $"is assignable to type '{expectedType.FullName}'") { }
 }

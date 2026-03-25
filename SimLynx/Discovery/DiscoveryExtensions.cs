@@ -1,4 +1,3 @@
-
 using Autofac.Builder;
 
 namespace SimLynx.Discovery;
@@ -8,10 +7,10 @@ namespace SimLynx.Discovery;
 /// </summary>
 public static class DiscoveryExtensions
 {
-
-    extension<TLimit, TActivatorData, TRegistrationStyle>(IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> builder)
+    extension<TLimit, TActivatorData, TRegistrationStyle>(
+        IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> builder
+    )
     {
-
         /// <summary>
         /// Configures the registration to be a discovery instance, meaning it will be a single instance for each
         /// discovery phase.
@@ -21,7 +20,5 @@ public static class DiscoveryExtensions
         {
             return builder.InstancePerOwned<DiscoveryPhase>();
         }
-
     }
-
 }

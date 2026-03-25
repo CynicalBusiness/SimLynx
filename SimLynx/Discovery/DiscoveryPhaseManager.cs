@@ -1,4 +1,3 @@
-
 using System.Collections.Generic;
 using Autofac;
 using SimLynx.Core.Phasing;
@@ -9,11 +8,9 @@ namespace SimLynx.Discovery;
 /// Host for the discovery phase of SimLynx, which is responsible for discovering content and preparing it for the
 /// design phase.
 /// </summary>
-public class DiscoveryPhaseManager(
-    ILifetimeScope scope,
-    IEnumerable<IDiscoveryRegistrationProvider> discoveryProviders) : PhaseManager<DiscoveryPhase>(scope)
+public class DiscoveryPhaseManager(ILifetimeScope scope, IEnumerable<IDiscoveryRegistrationProvider> discoveryProviders)
+    : PhaseManager<DiscoveryPhase>(scope)
 {
-
     /// <inheritdoc/>
     protected override void ConfigureContainer(ContainerBuilder builder)
     {
@@ -24,5 +21,4 @@ public class DiscoveryPhaseManager(
             provider.ConfigureDiscovery(builder);
         }
     }
-
 }

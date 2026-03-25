@@ -1,4 +1,3 @@
-
 namespace SimLynx.Design.Prototypes;
 
 /// <summary>
@@ -7,7 +6,4 @@ namespace SimLynx.Design.Prototypes;
 /// <remarks>
 /// Behaviors allow for designing reusable component-like logic that can be attached to prototypes.
 /// </remarks>
-public class Behavior : IBehavior
-{
-
-}
+public class Behavior : IBehavior { }

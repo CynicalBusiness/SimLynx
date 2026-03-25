@@ -1,4 +1,3 @@
-
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,7 +8,6 @@ namespace SimLynx.Core.Phasing;
 /// </summary>
 public interface IPhase
 {
-
     /// <summary>
     /// Whether or not this phase has started execution.
     /// </summary>
@@ -22,5 +20,4 @@ public interface IPhase
     /// <param name="cancellationToken">A token to abort the run.</param>
     /// <returns>A task that represents the run operation.</returns>
     public Task StartAsync(Symbol[]? phasePlan = null, CancellationToken cancellationToken = default);
-
 }

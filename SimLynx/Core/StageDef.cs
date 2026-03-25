@@ -1,4 +1,3 @@
-
 namespace SimLynx.Core;
 
 /// <summary>

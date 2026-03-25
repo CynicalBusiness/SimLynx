@@ -1,4 +1,3 @@
-
 using System.Collections.Generic;
 using Autofac;
 using SimLynx.Core.Phasing;
@@ -10,10 +9,9 @@ namespace SimLynx.Simulation;
 /// </summary>
 public class SimulationPhaseManager(
     ILifetimeScope scope,
-    IEnumerable<ISimulationRegistrationProvider> registrationProviders)
-    : PhaseManager<SimulationPhase>(scope)
+    IEnumerable<ISimulationRegistrationProvider> registrationProviders
+) : PhaseManager<SimulationPhase>(scope)
 {
-
     /// <inheritdoc/>
     protected override void ConfigureContainer(ContainerBuilder builder)
     {
@@ -24,5 +22,4 @@ public class SimulationPhaseManager(
             provider.ConfigureSimulation(builder);
         }
     }
-
 }

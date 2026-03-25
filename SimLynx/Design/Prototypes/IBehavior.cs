@@ -1,4 +1,3 @@
-
 namespace SimLynx.Design.Prototypes;
 
 /// <summary>
@@ -7,7 +6,4 @@ namespace SimLynx.Design.Prototypes;
 /// <remarks>
 /// Contains the bare minimum for a prototype behavior.
 /// </remarks>
-public interface IBehavior
-{
-
-}
+public interface IBehavior { }

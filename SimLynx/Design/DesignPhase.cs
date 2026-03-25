@@ -1,4 +1,3 @@
-
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -12,9 +11,7 @@ namespace SimLynx.Design;
 /// Host for the design phase of SimLynx, which is responsible for building simulation structures from loaded
 /// content.
 /// </summary>
-public class DesignPhase(
-    IEnumerable<IDesignService> designServices,
-    IIndex<Symbol, IPhaseManager> phaseManagers)
+public class DesignPhase(IEnumerable<IDesignService> designServices, IIndex<Symbol, IPhaseManager> phaseManagers)
     : Phase(phaseManagers)
 {
     /// <summary>
@@ -25,7 +22,6 @@ public class DesignPhase(
     /// <inheritdoc/>
     protected override Task RunAsync(CancellationToken cancellationToken)
     {
-        return Task.WhenAll(designServices
-            .Select(s => s.RunDesignAsync(cancellationToken)));
+        return Task.WhenAll(designServices.Select(s => s.RunDesignAsync(cancellationToken)));
     }
 }

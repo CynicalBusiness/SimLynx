@@ -1,4 +1,3 @@
-
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,10 +10,8 @@ namespace SimLynx.Core.Phasing;
 /// <summary>
 /// Base implementation for a phase manager, with extra support for only-once initialization and chaining.
 /// </summary>
-public abstract class PhaseManager<TPhase>(
-    ILifetimeScope currentScope) :
-        IPhaseManager
-        where TPhase : IPhase
+public abstract class PhaseManager<TPhase>(ILifetimeScope currentScope) : IPhaseManager
+    where TPhase : IPhase
 {
     private Task? _initTask;
     private readonly Lock _initTaskLock = new();
@@ -41,7 +38,7 @@ public abstract class PhaseManager<TPhase>(
     }
 
     /// <inheritdoc/>
-    public async virtual Task<Owned<IPhase>> StartAsync(CancellationToken cancellationToken)
+    public virtual async Task<Owned<IPhase>> StartAsync(CancellationToken cancellationToken)
     {
         await TryInitAsync(cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
@@ -87,9 +84,6 @@ public abstract class PhaseManager<TPhase>(
     /// <param name="builder">The <see cref="ContainerBuilder"/> instance to configure.</param>
     protected virtual void ConfigureContainer(ContainerBuilder builder)
     {
-        builder.RegisterType<TPhase>()
-            .AsSelf()
-            .As<IPhase>()
-            .SingleInstance();
+        builder.RegisterType<TPhase>().AsSelf().As<IPhase>().SingleInstance();
     }
 }

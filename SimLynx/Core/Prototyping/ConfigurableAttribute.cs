@@ -1,4 +1,3 @@
-
 using System;
 
 namespace SimLynx.Core.Prototyping;
@@ -15,16 +14,15 @@ namespace SimLynx.Core.Prototyping;
 [AttributeUsage(AttributeTargets.Property, Inherited = true, AllowMultiple = false)]
 public sealed class ConfigurableAttribute(bool isConfigurable) : Attribute
 {
-
     /// <summary>
     /// Marks this property as configurable, even if it would otherwise not be (e.g. if it's non-public).
     /// </summary>
-    public ConfigurableAttribute() : this(true) { }
+    public ConfigurableAttribute()
+        : this(true) { }
 
     /// <summary>
     /// Indicates whether the property is configurable by its corresponding prototype. If false, the property will be ignored
     /// when configuring a prototype object from a prototype.
     /// </summary>
     public bool IsConfigurable { get; } = isConfigurable;
-
 }

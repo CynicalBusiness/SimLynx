@@ -1,4 +1,3 @@
-
 namespace SimLynx.Core.Prototyping;
 
 /// <summary>
@@ -9,8 +8,6 @@ namespace SimLynx.Core.Prototyping;
 /// </remarks>
 public abstract class Prototype : IPrototype
 {
-
     /// <inheritdoc/>
     public required Symbol Id { get; init; }
-
 }

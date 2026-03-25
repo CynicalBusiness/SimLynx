@@ -1,4 +1,3 @@
-
 namespace SimLynx.Discovery.Content;
 
 /// <summary>
@@ -6,10 +5,8 @@ namespace SimLynx.Discovery.Content;
 /// </summary>
 public interface IContentPackage
 {
-
     /// <summary>
     /// The manifest that describes this package.
     /// </summary>
     public ContentPackageManifest Manifest { get; }
-
 }

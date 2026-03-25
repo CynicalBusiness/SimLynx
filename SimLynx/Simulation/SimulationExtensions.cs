@@ -1,4 +1,3 @@
-
 using Autofac.Builder;
 
 namespace SimLynx.Simulation;
@@ -8,10 +7,10 @@ namespace SimLynx.Simulation;
 /// </summary>
 public static class SimulationExtensions
 {
-
-    extension<TLimit, TActivatorData, TRegistrationStyle>(IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> builder)
+    extension<TLimit, TActivatorData, TRegistrationStyle>(
+        IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> builder
+    )
     {
-
         /// <summary>
         /// Configures the registration to be a simulation instance, meaning it will be a single instance for each
         /// simulation phase.
@@ -21,7 +20,5 @@ public static class SimulationExtensions
         {
             return builder.InstancePerOwned<SimulationPhase>();
         }
-
     }
-
 }

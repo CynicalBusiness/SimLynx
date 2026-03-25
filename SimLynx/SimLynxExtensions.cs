@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -11,12 +10,10 @@ namespace SimLynx;
 /// </summary>
 public static class SimLynxExtensions
 {
-
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="source">The source sequence.</param>
     extension<T>(IEnumerable<T> source)
     {
-
         /// <summary>
         /// Performs the specified action on each element of the source sequence and yields the element.
         /// </summary>
@@ -30,12 +27,10 @@ public static class SimLynxExtensions
                 yield return item;
             }
         }
-
     }
 
     extension(Type thisType)
     {
-
         /// <summary>
         /// Determines if the specified type is a subclass of a raw generic type.
         /// </summary>
@@ -76,12 +71,12 @@ public static class SimLynxExtensions
         {
             return IsSubclassOfRawGeneric(thisType, generic, bailAtType, out _);
         }
-
     }
 
-    extension<TLimit, TActivatorData, TRegistrationStyle>(IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> builder)
+    extension<TLimit, TActivatorData, TRegistrationStyle>(
+        IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> builder
+    )
     {
-
         /// <summary>
         /// Configures the registration to be identified by the specified symbol, allowing it to be resolved by that
         /// symbol as a key.
@@ -92,7 +87,5 @@ public static class SimLynxExtensions
         {
             return builder.Keyed<Symbol>(id);
         }
-
     }
-
 }
