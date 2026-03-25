@@ -1,6 +1,4 @@
 
-using SimLynx.Core.Defs;
-
 namespace SimLynx.Design.Prototypes;
 
 /// <summary>
@@ -9,15 +7,7 @@ namespace SimLynx.Design.Prototypes;
 /// <remarks>
 /// Behaviors allow for designing reusable component-like logic that can be attached to prototypes.
 /// </remarks>
-public class Behavior : IBehavior, IDefObject<BehaviorDef>
+public class Behavior : IBehavior
 {
-
-    /// <inheritdoc cref="IBehavior.Prototype"/>
-    public required Prototype Prototype { get; init; }
-
-    /// <inheritdoc />
-    public required BehaviorDef Def { get; init; }
-
-    IPrototype IBehavior.Prototype => Prototype;
 
 }

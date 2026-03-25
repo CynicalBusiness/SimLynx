@@ -1,11 +1,10 @@
 
 using System;
 
-namespace SimLynx.Core.Defs;
+namespace SimLynx.Core.Prototyping;
 
 /// <summary>
-/// Allows for flagging a def object's property as (not) configurable by its corresponding def, as well as controlling
-/// how this property is configured.
+/// Allows for flagging a prototype's property as configurable (or not).
 /// </summary>
 /// <remarks>
 /// This attribute can be used to override the default rules for when and how a property is configured, such as allowing
@@ -23,8 +22,8 @@ public sealed class ConfigurableAttribute(bool isConfigurable) : Attribute
     public ConfigurableAttribute() : this(true) { }
 
     /// <summary>
-    /// Indicates whether the property is configurable by its corresponding def. If false, the property will be ignored
-    /// when configuring a def object from a def.
+    /// Indicates whether the property is configurable by its corresponding prototype. If false, the property will be ignored
+    /// when configuring a prototype object from a prototype.
     /// </summary>
     public bool IsConfigurable { get; } = isConfigurable;
 

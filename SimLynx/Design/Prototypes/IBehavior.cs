@@ -1,6 +1,4 @@
 
-using SimLynx.Core.Defs;
-
 namespace SimLynx.Design.Prototypes;
 
 /// <summary>
@@ -9,12 +7,7 @@ namespace SimLynx.Design.Prototypes;
 /// <remarks>
 /// Contains the bare minimum for a prototype behavior.
 /// </remarks>
-public interface IBehavior : IDefObject
+public interface IBehavior
 {
-
-    /// <summary>
-    /// The prototype to which this behavior is attached.
-    /// </summary>
-    public IPrototype Prototype { get; }
 
 }
