@@ -30,14 +30,18 @@ public abstract class SimLynxApp
     /// <summary>
     /// Initializes a new app instance.
     /// </summary>
-    protected SimLynxApp(ILifetimeScope scope)
+    protected SimLynxApp()
     {
-        Scope = scope;
         Manifest = CreateContentManifest();
     }
 
     /// <inheritdoc/>
     public ContentPackageManifest Manifest { get; }
+
+    /// <summary>
+    /// The Autofac scope for this application.
+    /// </summary>
+    public required ILifetimeScope Scope { get; init; }
 
     /// <summary>
     /// Configuration of phases the application will run, in order.
@@ -47,11 +51,6 @@ public abstract class SimLynxApp
     /// </summary>
     protected List<Symbol> PhasePlan { get; set; } =
     [DiscoveryPhase.PhaseId, DesignPhase.PhaseId, SimulationPhase.PhaseId];
-
-    /// <summary>
-    /// The Autofac scope for this application.
-    /// </summary>
-    protected ILifetimeScope Scope { get; }
 
     /// <summary>
     /// Runs the application, returning a task that represents its lifetime. The returned task should complete when the
