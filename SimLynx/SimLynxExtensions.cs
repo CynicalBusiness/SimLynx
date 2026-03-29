@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Reflection;
 using Autofac.Builder;
 
 namespace SimLynx;
@@ -71,6 +74,40 @@ public static class SimLynxExtensions
         {
             return IsSubclassOfRawGeneric(thisType, generic, bailAtType, out _);
         }
+
+#if !NET5_0_OR_GREATER // this method is included in .NET 8, use it directly when available
+        /// <summary>
+        /// Determines whether the current type is assignable to the specified target type, inverse of
+        /// <see cref="Type.IsAssignableFrom(Type)"/>.
+        /// </summary>
+        /// <param name="targetType">The target type to check against.</param>
+        /// <returns><c>true</c> if the current type is assignable to the specified target type; otherwise, <c>false</c>.</returns>
+        public bool IsAssignableTo(Type targetType)
+        {
+            return targetType.IsAssignableFrom(thisType);
+        }
+#endif
+    }
+
+    extension(PropertyInfo propertyInfo)
+    {
+        /// <summary>
+        /// Indicates whether or not this property is required on its type.
+        /// </summary>
+        /// <remarks>
+        /// A property is considered required if it uses the <see langword="required"/> modifier or marked with
+        /// <see cref="RequiredAttribute"/>.
+        /// </remarks>
+        public bool IsRequired =>
+            propertyInfo.IsDefined(typeof(RequiredAttribute))
+#if NET5_0_OR_GREATER
+            || propertyInfo.IsDefined(typeof(System.Runtime.CompilerServices.RequiredMemberAttribute), inherit: false);
+#else
+            // in case a down-stream consumer uses their own shim, or the compiler includes it itself, look by name
+            || propertyInfo.CustomAttributes.Any(attribute =>
+                attribute.AttributeType.FullName == "System.Runtime.CompilerServices.RequiredMemberAttribute"
+            );
+#endif
     }
 
     extension<TLimit, TActivatorData, TRegistrationStyle>(

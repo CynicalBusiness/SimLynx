@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
@@ -12,7 +11,7 @@ internal class PrototypeInfo<TBaseType, TType> : IPrototypeInfo<TType>
     where TBaseType : class, IPrototype
     where TType : class, TBaseType
 {
-    private static ImmutableDictionary<string, PrototypeProperty> GetProperties(IPrototypeInfo prototypeInfo)
+    private static Dictionary<string, PrototypeProperty> GetProperties(IPrototypeInfo prototypeInfo)
     {
         var propInfos = typeof(TType).GetProperties(
             BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Public | BindingFlags.NonPublic
@@ -34,7 +33,7 @@ internal class PrototypeInfo<TBaseType, TType> : IPrototypeInfo<TType>
 
                 return attr.IsConfigurable;
             })
-            .ToImmutableDictionary(p => p.Name, p => new PrototypeProperty(prototypeInfo, p));
+            .ToDictionary(p => p.Name, p => new PrototypeProperty(prototypeInfo, p));
     }
 
     private static Func<TType>? GetConstructorFunc(Type type)
@@ -44,7 +43,7 @@ internal class PrototypeInfo<TBaseType, TType> : IPrototypeInfo<TType>
             return null;
         }
 
-        var defaultCtor = type.GetConstructor(BindingFlags.Public, []);
+        var defaultCtor = type.GetConstructor([]);
         if (defaultCtor is null)
         {
             return null;

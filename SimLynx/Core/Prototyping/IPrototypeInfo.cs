@@ -60,7 +60,9 @@ public interface IPrototypeInfo<out TType> : IPrototypeInfo, ITypeInfo<TType>
     public Func<TType>? CreateInstance { get; }
 
     /// <inheritdoc cref="IPrototypeInfo.IsAbstract"/>
+#if NET8_0_OR_GREATER
     [MemberNotNullWhen(false, nameof(CreateInstance))]
+#endif
     public new bool IsAbstract => CreateInstance is null;
     bool IPrototypeInfo.IsAbstract => IsAbstract;
 }

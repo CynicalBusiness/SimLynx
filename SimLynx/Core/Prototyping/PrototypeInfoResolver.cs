@@ -33,7 +33,10 @@ public class PrototypeInfoResolver<TPrototype>
     /// <returns>The prototype type information for the given prototype type.</returns>
     public IPrototypeInfo<TPrototype> Get(Type defType)
     {
-        ArgumentNullException.ThrowIfNull(defType, nameof(defType));
+        if (defType is null)
+        {
+            throw new ArgumentNullException(nameof(defType));
+        }
 
         if (!IsValidType(defType))
         {

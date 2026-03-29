@@ -10,7 +10,7 @@ namespace SimLynx.Core.Phasing;
 /// </summary>
 public abstract class Phase(IIndex<Symbol, IPhaseManager> phaseManagers) : IPhase
 {
-    private byte _startFlag = 0;
+    private int _startFlag = 0;
 
     /// <inheritdoc/>
     public bool HasStarted => _startFlag != 0;

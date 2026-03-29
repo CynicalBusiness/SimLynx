@@ -99,6 +99,13 @@ public class SimLynx<TApp>
         }
     }
 
+    /// <summary>
+    /// Starts the SimLynx instance, returning a task that completes when the app stops. If the instance is already
+    /// running, an exception is thrown.
+    /// </summary>
+    /// <param name="cancellationToken">A cancellation token that can be used to stop the app.</param>
+    /// <returns>A task that represents the lifetime of the app.</returns>
+    /// <exception cref="InvalidOperationException"></exception>
     public Task RunAsync(CancellationToken cancellationToken = default)
     {
         _lock.EnterUpgradeableReadLock();

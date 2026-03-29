@@ -1,4 +1,3 @@
-using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
@@ -14,17 +13,12 @@ public abstract class PhaseManager<TPhase>(ILifetimeScope currentScope) : IPhase
     where TPhase : IPhase
 {
     private Task? _initTask;
-    private readonly Lock _initTaskLock = new();
+    private readonly object _initTaskLock = new();
 
     /// <summary>
     /// Whether or not this manager has initialized yet.
     /// </summary>
     public bool IsInitialized => _initTask is not null;
-
-    /// <summary>
-    /// The assembly load context to use for this phase, if any.
-    /// </summary>
-    public AssemblyLoadContext? LoadContext { get; protected set; }
 
     /// <summary>
     /// Resets the initialization state of this manager, allowing it to be initialized again.
@@ -44,9 +38,7 @@ public abstract class PhaseManager<TPhase>(ILifetimeScope currentScope) : IPhase
         cancellationToken.ThrowIfCancellationRequested();
 
         var tag = new TypedService(typeof(TPhase));
-        var phaseScope = LoadContext is not null
-            ? currentScope.BeginLoadContextLifetimeScope(tag, LoadContext, ConfigureContainer)
-            : currentScope.BeginLifetimeScope(tag, ConfigureContainer);
+        var phaseScope = currentScope.BeginLifetimeScope(tag, ConfigureContainer);
 
         var phase = phaseScope.Resolve<TPhase>();
         cancellationToken.ThrowIfCancellationRequested();
