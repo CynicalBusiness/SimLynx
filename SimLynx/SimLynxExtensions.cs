@@ -89,7 +89,7 @@ public static class SimLynxExtensions
 #endif
     }
 
-    extension(PropertyInfo propertyInfo)
+    extension(MemberInfo member)
     {
         /// <summary>
         /// Indicates whether or not this property is required on its type.
@@ -99,15 +99,11 @@ public static class SimLynxExtensions
         /// <see cref="RequiredAttribute"/>.
         /// </remarks>
         public bool IsRequired =>
-            propertyInfo.IsDefined(typeof(RequiredAttribute))
-#if NET5_0_OR_GREATER
-            || propertyInfo.IsDefined(typeof(System.Runtime.CompilerServices.RequiredMemberAttribute), inherit: false);
-#else
-            // in case a down-stream consumer uses their own shim, or the compiler includes it itself, look by name
-            || propertyInfo.CustomAttributes.Any(attribute =>
+            member.IsDefined(typeof(RequiredAttribute))
+            || member.CustomAttributes.Any(attribute =>
+                // in case a down-stream consumer uses their own shim, or the compiler includes it itself, look by name
                 attribute.AttributeType.FullName == "System.Runtime.CompilerServices.RequiredMemberAttribute"
             );
-#endif
     }
 
     extension<TLimit, TActivatorData, TRegistrationStyle>(

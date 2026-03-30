@@ -44,30 +44,23 @@ public abstract class SimLynxApp
     public required ILifetimeScope Scope { get; init; }
 
     /// <summary>
-    /// Configuration of phases the application will run, in order.
-    /// <br/>
-    /// By default, this will run the Discovery, Design, then Simulation phases, but can be modified to adjust
-    /// behavior, such as introducing new phases.
+    /// The phase ID that the app will begin with.
     /// </summary>
-    protected List<Symbol> PhasePlan { get; set; } =
-    [DiscoveryPhase.PhaseId, DesignPhase.PhaseId, SimulationPhase.PhaseId];
+    public Symbol InitialPhaseId { get; protected init; } = DiscoveryPhase.PhaseId;
 
     /// <summary>
     /// Runs the application, returning a task that represents its lifetime. The returned task should complete when the
     /// application has shut down.
     /// </summary>
+    /// <remarks>
+    /// If overriding this method, call <c>base.RunAsync</c> only when you want the app to actually start. Any pre-start
+    /// logic should be before the super call, and any post-shutdown logic after it.
+    /// </remarks>
     /// <param name="cancellationToken">A token to cancel and stop the app.</param>
     /// <returns>A task that represents the application's lifetime.</returns>
-    public Task RunAsync(CancellationToken cancellationToken)
+    public virtual Task RunAsync(CancellationToken cancellationToken)
     {
-        if (PhasePlan.Count == 0)
-        {
-            throw new InvalidOperationException("Phase plan cannot be empty");
-        }
-
-        var initialPhaseId = PhasePlan[0];
-        var initialPhaseManager = Scope.ResolveKeyed<IPhaseManager>(initialPhaseId);
-        return initialPhaseManager.StartAndRunAsync([.. PhasePlan.Skip(1)], cancellationToken);
+        return Scope.BeginPhase(InitialPhaseId, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -86,16 +79,6 @@ public abstract class SimLynxApp
     public virtual void ConfigureSimulation(ContainerBuilder builder)
     {
         // default no-op
-    }
-
-    /// <summary>
-    /// Gets the initial phase manager to run when the app starts. By default, this is the
-    /// <see cref="DiscoveryPhaseManager"/>, but can be overridden.
-    /// </summary>
-    /// <returns>The initial phase manager.</returns>
-    protected virtual IPhaseManager GetInitialPhaseManager()
-    {
-        return Scope.Resolve<DiscoveryPhaseManager>();
     }
 
     /// <summary>

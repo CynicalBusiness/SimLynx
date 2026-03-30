@@ -9,11 +9,6 @@ internal class DiscoveryModule : Module
     {
         base.Load(builder);
 
-        builder
-            .RegisterType<DiscoveryPhaseManager>()
-            .AsSelf()
-            .As<IPhaseManager>()
-            .IdentifiedBy(DiscoveryPhase.PhaseId)
-            .InstancePerLifetimeScope();
+        builder.RegisterPhase<DiscoveryPhase, DiscoveryPhase.Builder>(DiscoveryPhase.PhaseId);
     }
 }

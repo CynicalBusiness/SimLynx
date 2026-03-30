@@ -1,6 +1,7 @@
 using Autofac;
 using Microsoft.Extensions.Logging;
 using SimLynx.Core;
+using SimLynx.Core.Phasing;
 using SimLynx.Design;
 using SimLynx.Discovery;
 using SimLynx.Simulation;
@@ -22,6 +23,7 @@ public class SimLynxModule<TApp> : Module
 
         builder.RegisterType<TApp>().AsSelf().As<SimLynxApp>().AsImplementedInterfaces().SingleInstance();
 
+        builder.RegisterModule<PhaseModule>();
         builder.RegisterModule<DiscoveryModule>();
         builder.RegisterModule<DesignModule>();
         builder.RegisterModule<SimulationModule>();

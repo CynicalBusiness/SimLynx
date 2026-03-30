@@ -9,11 +9,6 @@ internal class DesignModule : Module
     {
         base.Load(builder);
 
-        builder
-            .RegisterType<DesignPhaseManager>()
-            .AsSelf()
-            .As<IPhaseManager>()
-            .IdentifiedBy(DesignPhase.PhaseId)
-            .InstancePerLifetimeScope();
+        builder.RegisterPhase<DesignPhase, DesignPhase.Builder>(DesignPhase.PhaseId);
     }
 }

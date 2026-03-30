@@ -9,11 +9,6 @@ internal class SimulationModule : Module
     {
         base.Load(builder);
 
-        builder
-            .RegisterType<SimulationPhaseManager>()
-            .AsSelf()
-            .As<IPhaseManager>()
-            .IdentifiedBy(SimulationPhase.PhaseId)
-            .InstancePerLifetimeScope();
+        builder.RegisterPhase<SimulationPhase, SimulationPhase.Builder>(SimulationPhase.PhaseId);
     }
 }

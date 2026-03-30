@@ -3,6 +3,9 @@
  */
 
 #if NETSTANDARD
+#pragma warning disable IDE0130
+#pragma warning disable IDE0290
+
 using System.ComponentModel;
 
 namespace System.Runtime.CompilerServices
@@ -40,4 +43,5 @@ namespace System.Diagnostics.CodeAnalysis
     [EditorBrowsable(EditorBrowsableState.Never)]
     internal sealed class SetsRequiredMembersAttribute : Attribute;
 }
+
 #endif

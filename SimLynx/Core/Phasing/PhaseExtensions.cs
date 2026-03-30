@@ -1,5 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
+using Autofac;
+using Autofac.Core.Registration;
 
 namespace SimLynx.Core.Phasing;
 
@@ -8,21 +10,29 @@ namespace SimLynx.Core.Phasing;
 /// </summary>
 public static class PhaseExtensions
 {
-    extension(IPhaseManager phaseManager)
+    extension(ContainerBuilder builder)
     {
         /// <summary>
-        /// Convenience method to start and run a phase manager in one call, returning a task that completes when the phase's
-        /// run completes and finishes disposal.
+        /// Registers a phase and its manager in the DI container, with the given phase ID as the key.
         /// </summary>
-        /// <param name="cancellationToken">A token to cancel the operation.</param>
-        /// <param name="phasePlan">An optional plan for which phases to run after this one, represented as an array of phase IDs. If the array is empty or null, no next phase will be run.</param>
-        /// <returns>A task that represents the operation.</returns>
-        public async Task StartAndRunAsync(Symbol[]? phasePlan = null, CancellationToken cancellationToken = default)
+        /// <typeparam name="TPhase"></typeparam>
+        /// <typeparam name="TPhaseManager"></typeparam>
+        /// <param name="phaseId"></param>
+        /// <returns></returns>
+        public IModuleRegistrar RegisterPhase<TPhase, TPhaseManager>(Symbol phaseId)
+            where TPhase : class, IPhase
+            where TPhaseManager : class, IPhaseBuilder<TPhase>
         {
-            await using var phase = await phaseManager.StartAsync(cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
+            return builder.RegisterModule(new PhaseModule<TPhase, TPhaseManager>(phaseId));
+        }
+    }
 
-            await phase.Value.StartAsync(phasePlan, cancellationToken);
+    extension(ILifetimeScope scope)
+    {
+        /// <inheritdoc cref="IPhaseManager.StartAsync"/>
+        public Task BeginPhase(Symbol phaseId, CancellationToken cancellationToken = default)
+        {
+            return scope.Resolve<IPhaseManager>().StartAsync(phaseId, cancellationToken);
         }
     }
 }
