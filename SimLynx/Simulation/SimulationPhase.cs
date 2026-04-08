@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
+using Microsoft.Extensions.Logging;
 using SimLynx.Core.Phasing;
 
 namespace SimLynx.Simulation;
@@ -26,8 +27,11 @@ public class SimulationPhase(IEnumerable<ISimulationService> simulationServices)
     /// <summary>
     /// Builder for the <see cref="SimulationPhase"/>.
     /// </summary>
-    public class Builder(ILifetimeScope scope, IEnumerable<ISimulationRegistrationProvider> registrationProviders)
-        : PhaseBuilder<SimulationPhase>(scope)
+    public class Builder(
+        ILogger<Builder> logger,
+        ILifetimeScope scope,
+        IEnumerable<ISimulationRegistrationProvider> registrationProviders
+    ) : PhaseBuilder<SimulationPhase>(logger, scope)
     {
         /// <inheritdoc/>
         protected override void ConfigureContainer(ContainerBuilder builder)

@@ -1,6 +1,7 @@
 using Autofac;
 using Microsoft.Extensions.Logging;
 using SimLynx.Core;
+using SimLynx.Core.Logging;
 using SimLynx.Core.Messaging;
 using SimLynx.Core.Phasing;
 using SimLynx.Design;

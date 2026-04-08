@@ -15,7 +15,7 @@ public abstract class Phase : IPhase
     public bool HasStarted => runTask is not null;
 
     /// <inheritdoc/>
-    public Symbol? NextPhaseId { get; set; }
+    public string? NextPhaseId { get; set; }
 
     /// <inheritdoc/>
     public required ILifetimeScope Scope { get; init; }

@@ -1,0 +1,1 @@
+namespace SimLynx.Core.Logging;

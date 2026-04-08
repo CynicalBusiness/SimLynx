@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
+using Microsoft.Extensions.Logging;
 using SimLynx.Core.Phasing;
 using SimLynx.Design;
 
@@ -36,8 +37,11 @@ public class DiscoveryPhase : Phase
     /// <summary>
     /// Builder for the <see cref="DiscoveryPhase"/>.
     /// </summary>
-    public class Builder(ILifetimeScope scope, IEnumerable<IDiscoveryRegistrationProvider> discoveryProviders)
-        : PhaseBuilder<DiscoveryPhase>(scope)
+    public class Builder(
+        ILogger<Builder> logger,
+        ILifetimeScope scope,
+        IEnumerable<IDiscoveryRegistrationProvider> discoveryProviders
+    ) : PhaseBuilder<DiscoveryPhase>(logger, scope)
     {
         /// <inheritdoc/>
         protected override void ConfigureContainer(ContainerBuilder builder)

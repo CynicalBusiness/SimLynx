@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
+using Microsoft.Extensions.Logging;
 using SimLynx.Core.Phasing;
 using SimLynx.Simulation;
 
@@ -36,8 +37,11 @@ public class DesignPhase : Phase
     /// <summary>
     /// Builder for the <see cref="DesignPhase"/>.
     /// </summary>
-    public class Builder(ILifetimeScope scope, IEnumerable<IDesignRegistrationProvider> designProviders)
-        : PhaseBuilder<DesignPhase>(scope)
+    public class Builder(
+        ILogger<Builder> logger,
+        ILifetimeScope scope,
+        IEnumerable<IDesignRegistrationProvider> designProviders
+    ) : PhaseBuilder<DesignPhase>(logger, scope)
     {
         /// <inheritdoc/>
         protected override void ConfigureContainer(ContainerBuilder builder)

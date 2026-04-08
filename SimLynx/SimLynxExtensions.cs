@@ -121,4 +121,81 @@ public static class SimLynxExtensions
             return builder.Keyed<Symbol>(id);
         }
     }
+
+    extension(ArgumentNullException)
+    {
+#if !NET6_0_OR_GREATER
+        // polyfill the static ArgumentNullException methods
+
+        /// <summary>
+        /// Throws an <see cref="ArgumentNullException"/> if the given argument is null.
+        /// </summary>
+        /// <remarks>
+        /// This method is a polyfill for the static method included in .NET 6 and later.
+        /// </remarks>
+        /// <param name="argument">The argument to check for null.</param>
+        /// <param name="paramName">The name of the parameter.</param>
+        /// <exception cref="ArgumentNullException">If the argument is null.</exception>
+        public static void ThrowIfNull(object? argument, string? paramName = null)
+        {
+            if (argument is null)
+            {
+                throw new ArgumentNullException(paramName);
+            }
+        }
+
+        /// <summary>
+        /// Throws an <see cref="ArgumentNullException"/> if the given argument is null.
+        /// </summary>
+        /// <remarks>
+        /// This method is a polyfill for the static method included in .NET 6 and later.
+        /// </remarks>
+        /// <typeparam name="T">The type of the argument.</typeparam>
+        /// <param name="argument">The argument to check for null.</param>
+        /// <param name="paramName">The name of the parameter.</param>
+        /// <exception cref="ArgumentNullException">If the argument is null.</exception>
+        public static void ThrowIfNull<T>(T? argument, string? paramName = null)
+            where T : class
+        {
+            if (argument is null)
+            {
+                throw new ArgumentNullException(paramName);
+            }
+        }
+
+        /// <summary>
+        /// Throws an <see cref="ArgumentNullException"/> if the given string argument is null or empty.
+        /// </summary>
+        /// <remarks>
+        /// This method is a polyfill for the static method included in .NET 6 and later.
+        /// </remarks>
+        /// <param name="argument">The string argument to check for null or empty.</param>
+        /// <param name="paramName">The name of the parameter.</param>
+        /// <exception cref="ArgumentNullException">If the argument is null or empty.</exception>
+        public static void ThrowIfNullOrEmpty(string? argument, string? paramName = null)
+        {
+            if (string.IsNullOrEmpty(argument))
+            {
+                throw new ArgumentNullException(paramName);
+            }
+        }
+
+        /// <summary>
+        /// Throws an <see cref="ArgumentNullException"/> if the given string argument is null or consists only of white-space characters.
+        /// </summary>
+        /// <remarks>
+        /// This method is a polyfill for the static method included in .NET 6 and later.
+        /// </remarks>
+        /// <param name="argument">The string argument to check for null or white-space.</param>
+        /// <param name="paramName">The name of the parameter.</param>
+        /// <exception cref="ArgumentNullException">If the argument is null or consists only of white-space characters.</exception>
+        public static void ThrowIfNullOrWhiteSpace(string? argument, string? paramName = null)
+        {
+            if (string.IsNullOrWhiteSpace(argument))
+            {
+                throw new ArgumentNullException(paramName);
+            }
+        }
+#endif
+    }
 }

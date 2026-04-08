@@ -3,15 +3,26 @@ using System.Threading.Tasks;
 using Autofac;
 using Autofac.Core;
 using Autofac.Features.OwnedInstances;
+using Microsoft.Extensions.Logging;
+using SimLynx.Core.Logging;
 
 namespace SimLynx.Core.Phasing;
 
 /// <summary>
 /// Base implementation for a phase manager, with extra support for only-once initialization and chaining.
 /// </summary>
-public abstract class PhaseBuilder<TPhase>(ILifetimeScope currentScope) : IPhaseBuilder<TPhase>
+public abstract class PhaseBuilder<TPhase>(ILogger<PhaseBuilder<TPhase>> logger, ILifetimeScope currentScope)
+    : IPhaseBuilder<TPhase>
     where TPhase : IPhase
 {
+    /// <summary>
+    /// Log event for when a phase manager is initializing its phase.
+    /// </summary>
+    public static readonly LogEvent<string> InitLogEvent = new(
+        EventId.For<PhaseBuilder<TPhase>>("PhaseBuilderInit"),
+        "Initializing phase: {PhaseId}"
+    );
+
     private Task? _initTask;
     private readonly ReaderWriterLockSlim _initTaskLock = new();
 
@@ -81,6 +92,7 @@ public abstract class PhaseBuilder<TPhase>(ILifetimeScope currentScope) : IPhase
             _initTaskLock.EnterWriteLock();
             try
             {
+                InitLogEvent.Log(logger, typeof(TPhase).ToString());
                 return _initTask = Init(cancellationToken);
             }
             finally

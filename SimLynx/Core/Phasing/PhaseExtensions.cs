@@ -19,7 +19,7 @@ public static class PhaseExtensions
         /// <typeparam name="TPhaseManager"></typeparam>
         /// <param name="phaseId"></param>
         /// <returns></returns>
-        public IModuleRegistrar RegisterPhase<TPhase, TPhaseManager>(Symbol phaseId)
+        public IModuleRegistrar RegisterPhase<TPhase, TPhaseManager>(string phaseId)
             where TPhase : class, IPhase
             where TPhaseManager : class, IPhaseBuilder<TPhase>
         {
@@ -30,7 +30,7 @@ public static class PhaseExtensions
     extension(ILifetimeScope scope)
     {
         /// <inheritdoc cref="IPhaseManager.StartAsync"/>
-        public Task BeginPhase(Symbol phaseId, CancellationToken cancellationToken = default)
+        public Task BeginPhase(string phaseId, CancellationToken cancellationToken = default)
         {
             return scope.Resolve<IPhaseManager>().StartAsync(phaseId, cancellationToken);
         }

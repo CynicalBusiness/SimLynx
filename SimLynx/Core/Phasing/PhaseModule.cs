@@ -8,7 +8,7 @@ namespace SimLynx.Core.Phasing;
 /// <typeparam name="TPhase">The type of the phase.</typeparam>
 /// <typeparam name="TPhaseManager">The type of the phase manager.</typeparam>
 /// <param name="phaseId">The identifier for the phase.</param>
-public class PhaseModule<TPhase, TPhaseManager>(Symbol phaseId) : Module
+public class PhaseModule<TPhase, TPhaseManager>(string phaseId) : Module
     where TPhase : class, IPhase
     where TPhaseManager : class, IPhaseBuilder<TPhase>
 {
@@ -21,14 +21,14 @@ public class PhaseModule<TPhase, TPhaseManager>(Symbol phaseId) : Module
             .RegisterType<TPhase>()
             .AsSelf()
             .AsImplementedInterfaces()
-            .IdentifiedBy(phaseId)
+            .Named<TPhase>(phaseId)
             .InstancePerOwned<TPhase>();
 
         builder
             .RegisterType<TPhaseManager>()
             .AsSelf()
             .AsImplementedInterfaces()
-            .IdentifiedBy(phaseId)
+            .Named<TPhaseManager>(phaseId)
             .InstancePerDependency();
     }
 }

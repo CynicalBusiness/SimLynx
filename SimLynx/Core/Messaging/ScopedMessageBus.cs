@@ -2,15 +2,29 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using Autofac;
 using Autofac.Core;
+using Microsoft.Extensions.Logging;
+using SimLynx.Core.Logging;
 
 namespace SimLynx.Core.Messaging;
 
-internal class ScopedMessageBus : IMessageBus, IMessageSubscriber<IMessage>
+/// <summary>
+/// <see cref="IMessageBus"/> implementation which is scoped to a lifetime scope, and automatically subscribes all
+/// <see cref="IMessageSubscriber{T}"/> registered within that scope.
+/// </summary>
+public class ScopedMessageBus : IMessageBus, IMessageSubscriber<IMessage>
 {
+    /// <summary>
+    /// Event ID for message emissions, used for logging.
+    /// </summary>
+    public static readonly LogEvent<string> MessageEmittedLogEvent = new(
+        EventId.For<ScopedMessageBus>("MessageEmitted"),
+        "Message emitted: {MessageType}",
+        LogLevel.Trace
+    );
+
     private static IEnumerable<(IMessageSubscriber Subscriber, Type MessageType)> GetRegisteredSubscribers(
         IComponentContext ctx
     )
@@ -43,11 +57,18 @@ internal class ScopedMessageBus : IMessageBus, IMessageSubscriber<IMessage>
     }
 
     private readonly ConcurrentDictionary<Type, SubscriptionSet> _subscriptions = [];
+    private readonly ILogger<ScopedMessageBus> logger;
 
+    /// <inheritdoc/>
     public sbyte Priority { get; } = MessageSubscriberPriority.LOWEST;
 
-    public ScopedMessageBus(ParentLifetimeScopeAccessor parentLifetimeScopeAccessor, IComponentContext ctx)
+    internal ScopedMessageBus(
+        ParentLifetimeScopeAccessor parentLifetimeScopeAccessor,
+        IComponentContext ctx,
+        ILogger<ScopedMessageBus> logger
+    )
     {
+        this.logger = logger;
         parentLifetimeScopeAccessor.ParentScope?.Resolve<IMessageBus>().Subscribe(this);
 
         foreach (var (subscriber, messageType) in GetRegisteredSubscribers(ctx))
@@ -56,10 +77,13 @@ internal class ScopedMessageBus : IMessageBus, IMessageSubscriber<IMessage>
         }
     }
 
+    /// <inheritdoc/>
     public IMessageBus Emit<TMessage>(in TMessage message)
         where TMessage : IMessage
     {
-        foreach (var emissionType in GetEmissionTypes(message.GetType()))
+        var messageType = message.GetType();
+        MessageEmittedLogEvent.Log(logger, messageType.ToString());
+        foreach (var emissionType in GetEmissionTypes(messageType))
         {
             if (_subscriptions.TryGetValue(emissionType, out var subscriptionSet))
             {
@@ -81,12 +105,14 @@ internal class ScopedMessageBus : IMessageBus, IMessageSubscriber<IMessage>
         return this;
     }
 
+    /// <inheritdoc/>
     public IDisposable Subscribe<TMessage>(IMessageSubscriber<TMessage> subscriber)
         where TMessage : IMessage
     {
         return Subscribe(typeof(TMessage), subscriber);
     }
 
+    /// <inheritdoc/>
     public IDisposable Subscribe(Type messageType, IMessageSubscriber subscriber)
     {
         var subscriptionSet = _subscriptions.GetOrAdd(messageType, t => new(t));
@@ -116,6 +142,7 @@ internal class ScopedMessageBus : IMessageBus, IMessageSubscriber<IMessage>
         }
     }
 
+    /// <inheritdoc/>
     public void HandleMessage(IMessage message)
     {
         Emit(message);

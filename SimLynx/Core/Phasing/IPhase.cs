@@ -22,7 +22,7 @@ public interface IPhase
     /// <summary>
     /// The ID of the next phase to run after this one, if any.
     /// </summary>
-    public Symbol? NextPhaseId { get; set; }
+    public string? NextPhaseId { get; set; }
 
     /// <summary>
     /// Runs this phase, returning a task that completes when the phase completes.
