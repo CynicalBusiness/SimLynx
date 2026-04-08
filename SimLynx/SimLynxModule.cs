@@ -1,6 +1,7 @@
 using Autofac;
 using Microsoft.Extensions.Logging;
 using SimLynx.Core;
+using SimLynx.Core.Messaging;
 using SimLynx.Core.Phasing;
 using SimLynx.Design;
 using SimLynx.Discovery;
@@ -19,13 +20,19 @@ public class SimLynxModule<TApp> : Module
     {
         base.Load(builder);
 
+        // core components
+        builder.RegisterType<ParentLifetimeScopeAccessor>().AsSelf().InstancePerLifetimeScope();
+
+        // core modules
         builder.RegisterModule<LoggingModule>().IfNotRegistered(typeof(ILogger));
+        builder.RegisterModule<MessagingModule>();
 
-        builder.RegisterType<TApp>().AsSelf().As<SimLynxApp>().AsImplementedInterfaces().SingleInstance();
-
+        // phase modules
         builder.RegisterModule<PhaseModule>();
         builder.RegisterModule<DiscoveryModule>();
         builder.RegisterModule<DesignModule>();
         builder.RegisterModule<SimulationModule>();
+
+        builder.RegisterType<TApp>().AsSelf().As<SimLynxApp>().AsImplementedInterfaces().SingleInstance();
     }
 }
