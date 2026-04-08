@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using Autofac;
 using Autofac.Core;
+using Autofac.Util;
 using Microsoft.Extensions.Logging;
 using SimLynx.Core.Logging;
 
@@ -14,7 +15,7 @@ namespace SimLynx.Core.Messaging;
 /// <see cref="IMessageBus"/> implementation which is scoped to a lifetime scope, and automatically subscribes all
 /// <see cref="IMessageSubscriber{T}"/> registered within that scope.
 /// </summary>
-public class ScopedMessageBus : IMessageBus, IMessageSubscriber<IMessage>
+public class ScopedMessageBus : Disposable, IMessageBus, IMessageSubscriber<IMessage>
 {
     /// <summary>
     /// Event ID for message emissions, used for logging.
@@ -33,7 +34,10 @@ public class ScopedMessageBus : IMessageBus, IMessageSubscriber<IMessage>
         // we don't want to resolve anything that might be assignable but isn't registered as such
         foreach (IComponentRegistration reg in ctx.ComponentRegistry.Registrations)
         {
-            if (!reg.Activator.LimitType.IsAssignableTo(typeof(IMessageSubscriber)))
+            if (
+                !reg.Activator.LimitType.IsAssignableTo(typeof(IMessageSubscriber))
+                || reg.Activator.LimitType.IsAssignableTo(typeof(IMessageBus)) // ignore message buses (let's not make infinite recursion, yeah?)
+            )
             {
                 continue;
             }
@@ -58,6 +62,8 @@ public class ScopedMessageBus : IMessageBus, IMessageSubscriber<IMessage>
 
     private readonly ConcurrentDictionary<Type, SubscriptionSet> _subscriptions = [];
     private readonly ILogger<ScopedMessageBus> logger;
+    private readonly IComponentContext ctx;
+    private readonly IDisposable? parentSubscription;
 
     /// <inheritdoc/>
     public sbyte Priority { get; } = MessageSubscriberPriority.LOWEST;
@@ -69,12 +75,8 @@ public class ScopedMessageBus : IMessageBus, IMessageSubscriber<IMessage>
     )
     {
         this.logger = logger;
-        parentLifetimeScopeAccessor.ParentScope?.Resolve<IMessageBus>().Subscribe(this);
-
-        foreach (var (subscriber, messageType) in GetRegisteredSubscribers(ctx))
-        {
-            Subscribe(messageType, subscriber);
-        }
+        this.ctx = ctx;
+        parentSubscription = parentLifetimeScopeAccessor.ParentScope?.Resolve<IMessageBus>().Subscribe(this);
     }
 
     /// <inheritdoc/>
@@ -146,6 +148,25 @@ public class ScopedMessageBus : IMessageBus, IMessageSubscriber<IMessage>
     public void HandleMessage(IMessage message)
     {
         Emit(message);
+    }
+
+    /// <inheritdoc/>
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (disposing)
+        {
+            parentSubscription?.Dispose();
+            _subscriptions.Clear();
+        }
+    }
+
+    internal void RegisterSubscribers()
+    {
+        foreach (var (subscriber, messageType) in GetRegisteredSubscribers(ctx))
+        {
+            Subscribe(messageType, subscriber);
+        }
     }
 
     private record SubscriptionSet(Type MessageType)

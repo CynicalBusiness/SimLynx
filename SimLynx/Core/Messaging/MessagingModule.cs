@@ -1,3 +1,4 @@
+using System;
 using Autofac;
 
 namespace SimLynx.Core.Messaging;
@@ -8,6 +9,10 @@ internal class MessagingModule : Module
     {
         base.Load(builder);
 
-        builder.RegisterType<ScopedMessageBus>().As<IMessageBus>().InstancePerLifetimeScope();
+        builder
+            .RegisterType<ScopedMessageBus>()
+            .AsImplementedInterfaces()
+            .InstancePerLifetimeScope()
+            .OnActivated(e => e.Instance.RegisterSubscribers());
     }
 }
