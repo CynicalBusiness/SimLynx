@@ -32,7 +32,7 @@ public static class SimLynxExtensions
         }
     }
 
-    extension(Type thisType)
+    extension(Type @this)
     {
         /// <summary>
         /// Determines if the specified type is a subclass of a raw generic type.
@@ -43,7 +43,7 @@ public static class SimLynxExtensions
         /// <returns><c>true</c> if the type is a subclass of the specified raw generic type; otherwise, <c>false</c>.</returns>
         public bool IsSubclassOfRawGeneric(Type generic, Type? bailAtType, [MaybeNullWhen(false)] out Type found)
         {
-            Type? next = thisType;
+            Type? next = @this;
             while (next != null && next != bailAtType)
             {
                 if (next.IsGenericType && next.GetGenericTypeDefinition() == generic)
@@ -60,19 +60,40 @@ public static class SimLynxExtensions
         /// <inheritdoc cref="IsSubclassOfRawGeneric(Type, Type?, out Type)"/>
         public bool IsSubclassOfRawGeneric(Type generic, [MaybeNullWhen(false)] out Type found)
         {
-            return IsSubclassOfRawGeneric(thisType, generic, null, out found);
+            return IsSubclassOfRawGeneric(@this, generic, null, out found);
         }
 
         /// <inheritdoc cref="IsSubclassOfRawGeneric(Type, Type?, out Type)"/>
         public bool IsSubclassOfRawGeneric(Type generic)
         {
-            return IsSubclassOfRawGeneric(thisType, generic, null, out _);
+            return IsSubclassOfRawGeneric(@this, generic, null, out _);
         }
 
         /// <inheritdoc cref="IsSubclassOfRawGeneric(Type, Type?, out Type)"/>
         public bool IsSubclassOfRawGeneric(Type generic, Type? bailAtType)
         {
-            return IsSubclassOfRawGeneric(thisType, generic, bailAtType, out _);
+            return IsSubclassOfRawGeneric(@this, generic, bailAtType, out _);
+        }
+
+        /// <summary>
+        /// Enumerates the base types of the current class type, starting from but not including the type itself.
+        /// </summary>
+        /// <remarks>
+        /// If the current type is not a class, this method returns an empty sequence.
+        /// </remarks>
+        /// <returns>An enumeration of the base types of the current class type.</returns>
+        public IEnumerable<Type> GetBaseTypes()
+        {
+            if (!@this.IsClass)
+            {
+                yield break;
+            }
+
+            var next = @this;
+            while ((next = next?.BaseType) is not null)
+            {
+                yield return next;
+            }
         }
 
 #if !NET5_0_OR_GREATER // this method is included in .NET 8, use it directly when available
@@ -84,7 +105,7 @@ public static class SimLynxExtensions
         /// <returns><c>true</c> if the current type is assignable to the specified target type; otherwise, <c>false</c>.</returns>
         public bool IsAssignableTo(Type targetType)
         {
-            return targetType.IsAssignableFrom(thisType);
+            return targetType.IsAssignableFrom(@this);
         }
 #endif
     }

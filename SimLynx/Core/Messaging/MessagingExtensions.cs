@@ -1,7 +1,5 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using Autofac.Builder;
+using System.Threading.Tasks;
 
 namespace SimLynx.Core.Messaging;
 
@@ -12,46 +10,59 @@ public static class MessagingExtensions
 {
     extension(IMessageBus @this)
     {
-        /// <inheritdoc cref="IMessageBus.Subscribe{TMessage}(IMessageSubscriber{TMessage})"/>
-        /// <param name="handler">The delegate handler for the message.</param>
-        /// <param name="priority">The priority of the subscriber.</param>
-        public IDisposable Subscribe<TMessage>(
-            MessageHandler<TMessage> handler,
-            sbyte priority = MessageSubscriberPriority.NORMAL
-        )
-            where TMessage : IMessage
+        /// <summary>
+        /// Subscribes a handler to this bus with the default priority.
+        /// </summary>
+        /// <typeparam name="TPayload">The type of the message payload.</typeparam>
+        /// <param name="messageHandler">The handler to subscribe.</param>
+        /// <returns>A disposable that can be used to unsubscribe the handler.</returns>
+        public IDisposable Subscribe<TPayload>(MessageHandler<TPayload> messageHandler)
+            where TPayload : notnull
         {
-            return @this.Subscribe(new MessageDelegateSubscriber<TMessage>(handler, priority));
+            return @this.Subscribe(messageHandler, Priorities.Normal);
         }
 
         /// <summary>
-        /// Emits multiple <typeparamref name="TMessage"/> messages.
+        /// Subscribes a synchronous action as a handler to this bus with the given <paramref name="priority"/>.
         /// </summary>
-        /// <typeparam name="TMessage">The type of messages to emit.</typeparam>
-        /// <param name="messages">The messages to emit.</param>
-        /// <returns>The current <see cref="IMessageBus"/> instance for chaining.</returns>
-        public IMessageBus Emit<TMessage>(IEnumerable<TMessage> messages)
-            where TMessage : IMessage
+        /// <typeparam name="TPayload">The type of the message payload.</typeparam>
+        /// <param name="messageAction">The handler to subscribe.</param>
+        /// <param name="priority">The priority of the handler.</param>
+        /// <returns>A disposable that can be used to unsubscribe the handler.</returns>
+        public IDisposable Subscribe<TPayload>(Action<IMessage<TPayload>> messageAction, sbyte priority)
+            where TPayload : notnull
         {
-            foreach (var message in messages)
-            {
-                @this = @this.Emit(message);
-            }
-            return @this;
+            return @this.Subscribe<TPayload>(
+                (message, _) =>
+                {
+                    messageAction.Invoke(message);
+                    return Task.CompletedTask;
+                },
+                priority
+            );
         }
 
-        /// <inheritdoc cref="Emit{TMessage}(IMessageBus,IEnumerable{TMessage})"/>
-        public IMessageBus Emit<TMessage>(params TMessage[] messages)
-            where TMessage : IMessage
+        /// <summary>
+        /// Subscribes a synchronous action as a handler to this bus with the default priority.
+        /// </summary>
+        /// <typeparam name="TPayload">The type of the message payload.</typeparam>
+        /// <param name="messageAction">The handler to subscribe.</param>
+        /// <returns>A disposable that can be used to unsubscribe the handler.</returns>
+        public IDisposable Subscribe<TPayload>(Action<IMessage<TPayload>> messageAction)
+            where TPayload : notnull
         {
-            return @this.Emit((IEnumerable<TMessage>)messages);
+            return @this.Subscribe(messageAction, Priorities.Normal);
         }
-    }
 
-    private record MessageDelegateSubscriber<TMessage>(MessageHandler<TMessage> Handler, sbyte Priority)
-        : IMessageSubscriber<TMessage>
-        where TMessage : IMessage
-    {
-        public void HandleMessage(TMessage message) => Handler(message);
+        /// <summary>
+        /// Subscribes the provided <paramref name="subscriber"/> to this bus with the subscriber's defined priority.
+        /// </summary>
+        /// <typeparam name="TPayload">The type of the message payload.</typeparam>
+        /// <param name="subscriber">The subscriber to add.</param>
+        /// <returns>A disposable that can be used to unsubscribe the subscriber.</returns>
+        public IDisposable Subscribe<TPayload>(IMessageSubscriber<TPayload> subscriber)
+        {
+            return @this.Subscribe<TPayload>(subscriber.HandleMessage, subscriber.Priority);
+        }
     }
 }

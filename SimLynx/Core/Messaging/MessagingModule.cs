@@ -9,10 +9,7 @@ internal class MessagingModule : Module
     {
         base.Load(builder);
 
-        builder
-            .RegisterType<ScopedMessageBus>()
-            .AsImplementedInterfaces()
-            .InstancePerLifetimeScope()
-            .OnActivated(e => e.Instance.RegisterSubscribers());
+        builder.RegisterType<ScopedMessageBus>().AsImplementedInterfaces().InstancePerLifetimeScope();
+        builder.RegisterType<MessageSubscriberActivator>().AsImplementedInterfaces().InstancePerLifetimeScope();
     }
 }

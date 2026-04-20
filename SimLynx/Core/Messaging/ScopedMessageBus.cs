@@ -3,222 +3,224 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Autofac;
-using Autofac.Core;
-using Autofac.Util;
-using Microsoft.Extensions.Logging;
-using SimLynx.Core.Logging;
 
 namespace SimLynx.Core.Messaging;
 
-/// <summary>
-/// <see cref="IMessageBus"/> implementation which is scoped to a lifetime scope, and automatically subscribes all
-/// <see cref="IMessageSubscriber{T}"/> registered within that scope.
-/// </summary>
-public class ScopedMessageBus : Disposable, IMessageBus, IMessageSubscriber<IMessage>
+internal class ScopedMessageBus(ParentLifetimeScopeAccessor parentLifetimeScopeAccessor) : IMessageBus, IDisposable
 {
-    /// <summary>
-    /// Event ID for message emissions, used for logging.
-    /// </summary>
-    public static readonly LogEvent<string> MessageEmittedLogEvent = new(
-        EventId.For<ScopedMessageBus>("MessageEmitted"),
-        "Message emitted: {MessageType}",
-        LogLevel.Trace
-    );
+    private static readonly ConcurrentDictionary<Type, ICollection<Type>> targetTypeCache = [];
 
-    private static IEnumerable<(IMessageSubscriber Subscriber, Type MessageType)> GetRegisteredSubscribers(
-        IComponentContext ctx
-    )
+    public static ICollection<Type> GetTargetMessageTypes(Type messageType)
     {
-        // get all registrations which are *registered* as closed types of IMessageSubscriber<>
-        // we don't want to resolve anything that might be assignable but isn't registered as such
-        foreach (IComponentRegistration reg in ctx.ComponentRegistry.Registrations)
+        return targetTypeCache.GetOrAdd(messageType, CreateTargetTypeCollection);
+    }
+
+    private static ICollection<Type> CreateTargetTypeCollection(Type messageType)
+    {
+        return [messageType, .. messageType.GetBaseTypes(), .. messageType.GetInterfaces()];
+    }
+
+    private readonly ReaderWriterLockSlim _lock = new();
+    private readonly Dictionary<Type, IMessageSubscriptionChannel> _channels = [];
+    private readonly List<IDisposable> _parentSubscriptions = [];
+    private readonly CancellationTokenSource _cts = new();
+
+    public IDisposable Subscribe<TPayload>(MessageHandler<TPayload> messageHandler, sbyte priority)
+    {
+        _lock.EnterWriteLock();
+        try
         {
-            if (
-                !reg.Activator.LimitType.IsAssignableTo(typeof(IMessageSubscriber))
-                || reg.Activator.LimitType.IsAssignableTo(typeof(IMessageBus)) // ignore message buses (let's not make infinite recursion, yeah?)
-            )
+            MessageSubscriptionChannel<TPayload> channel;
+            if (!_channels.TryGetValue(typeof(TPayload), out var c))
             {
-                continue;
-            }
+                c = channel = new MessageSubscriptionChannel<TPayload>();
+                _channels.Add(typeof(TPayload), c);
 
-            foreach (var service in reg.Services.OfType<TypedService>())
-            {
-                if (
-                    !service.ServiceType.IsGenericType
-                    || service.ServiceType.GetGenericTypeDefinition() != typeof(IMessageSubscriber<>)
-                )
+                // if there's a parent bus available, subscribe to it so messages propagate downward
+                var parentBus = parentLifetimeScopeAccessor.ParentScope?.ResolveOptional<IMessageBus>();
+                if (parentBus is not null && parentBus != this)
                 {
-                    continue;
+                    _parentSubscriptions.Add(
+                        parentBus.Subscribe<TPayload>(
+                            (message, token) => Dispatch(message, token),
+                            Priorities.VeryLow + Priorities.Low
+                        )
+                    );
                 }
+            }
+            else
+            {
+                channel = (MessageSubscriptionChannel<TPayload>)c;
+            }
+            channel.Add(messageHandler, priority);
+        }
+        finally
+        {
+            _lock.ExitWriteLock();
+        }
 
-                var messageType = service.ServiceType.GetGenericArguments()[0];
-                var subscriber = (IMessageSubscriber)
-                    ctx.ResolveComponent(new ResolveRequest(service, new(reg.ResolvePipeline, reg), []));
-                yield return (subscriber, messageType);
+        return new DisposalAction(() => Unsubscribe(messageHandler, priority));
+    }
+
+    public bool Unsubscribe<TPayload>(MessageHandler<TPayload> messageHandler, sbyte priority)
+    {
+        _lock.EnterWriteLock();
+        try
+        {
+            if (_channels.TryGetValue(typeof(TPayload), out var c))
+            {
+                var channel = (MessageSubscriptionChannel<TPayload>)c;
+                return channel.Remove(messageHandler, priority);
             }
         }
+        finally
+        {
+            _lock.ExitWriteLock();
+        }
+
+        return false;
     }
 
-    private readonly ConcurrentDictionary<Type, SubscriptionSet> _subscriptions = [];
-    private readonly ILogger<ScopedMessageBus> logger;
-    private readonly IComponentContext ctx;
-    private readonly IDisposable? parentSubscription;
+    public Task<IMessage<TPayload>> Send<TPayload>(TPayload payload, CancellationToken cancellationToken = default)
+    {
+        return Dispatch(new Message<TPayload>(payload), cancellationToken);
+    }
 
-    /// <inheritdoc/>
-    public sbyte Priority { get; } = MessageSubscriberPriority.LOWEST;
-
-    internal ScopedMessageBus(
-        ParentLifetimeScopeAccessor parentLifetimeScopeAccessor,
-        IComponentContext ctx,
-        ILogger<ScopedMessageBus> logger
+    public async Task<IMessage<TPayload>> Dispatch<TPayload>(
+        IMessage<TPayload> message,
+        CancellationToken cancellationToken
     )
     {
-        this.logger = logger;
-        this.ctx = ctx;
-        parentSubscription = parentLifetimeScopeAccessor.ParentScope?.Resolve<IMessageBus>().Subscribe(this);
+        cancellationToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cts.Token).Token;
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // pull the relevant handlers outside of the lock to avoid holding it during handler execution
+        var targetTypes = GetTargetMessageTypes(typeof(TPayload));
+        var channels = new List<IMessageSubscriptionChannel>(targetTypes.Count);
+
+        _lock.EnterReadLock();
+        try
+        {
+            foreach (var targetType in targetTypes)
+            {
+                if (_channels.TryGetValue(targetType, out var c))
+                {
+                    channels.Add(c);
+                }
+            }
+        }
+        finally
+        {
+            _lock.ExitReadLock();
+        }
+
+        foreach (var task in channels.SelectMany(i => i.Invoke(message, cancellationToken)))
+        {
+            // TODO set up some parallelism in the future
+            // just series for now to keep things simple
+            await task;
+        }
+        return message;
     }
 
-    /// <inheritdoc/>
-    public IMessageBus Emit<TMessage>(in TMessage message)
-        where TMessage : IMessage
+    public void Dispose()
     {
-        var messageType = message.GetType();
-        MessageEmittedLogEvent.Log(logger, messageType.ToString());
-        foreach (var emissionType in GetEmissionTypes(messageType))
+        _lock.EnterWriteLock();
+        try
         {
-            if (_subscriptions.TryGetValue(emissionType, out var subscriptionSet))
+            foreach (var channel in _channels.Values)
             {
-                subscriptionSet.Lock.EnterReadLock();
-                try
+                channel.Dispose();
+            }
+            _channels.Clear();
+
+            foreach (var subscription in _parentSubscriptions)
+            {
+                subscription.Dispose();
+            }
+            _parentSubscriptions.Clear();
+        }
+        finally
+        {
+            _lock.ExitWriteLock();
+        }
+        _cts.Cancel();
+        _lock.Dispose();
+    }
+
+    private interface IMessageSubscriptionChannel : IDisposable
+    {
+        public IEnumerable<Task> Invoke(IMessage message, CancellationToken cancellationToken);
+    }
+
+    private class MessageSubscriptionChannel<TPayload> : IMessageSubscriptionChannel
+    {
+        private readonly SortedDictionary<sbyte, LinkedSet<MessageHandler<TPayload>>> _handlerSets = new(
+            PriorityComparer.Default
+        );
+        public readonly ResetLazy<MessageHandler<TPayload>[][]> Handlers;
+
+        public MessageSubscriptionChannel()
+        {
+            Handlers = new(GetHandlers);
+        }
+
+        public void Add(MessageHandler<TPayload> handler, sbyte priority)
+        {
+            if (!_handlerSets.TryGetValue(priority, out var handlerSet))
+            {
+                _handlerSets.Add(priority, handlerSet = []);
+            }
+            handlerSet.Add(handler);
+            Handlers.Reset();
+        }
+
+        public bool Remove(MessageHandler<TPayload> handler, sbyte priority)
+        {
+            if (_handlerSets.TryGetValue(priority, out var handlerSet))
+            {
+                if (handlerSet.Remove(handler))
                 {
-                    foreach (var subscription in subscriptionSet.Subscriptions)
+                    if (handlerSet.Count == 0)
                     {
-                        subscription.Subscriber.HandleMessage(message);
+                        _handlerSets.Remove(priority);
                     }
-                }
-                finally
-                {
-                    subscriptionSet.Lock.ExitReadLock();
+                    Handlers.Reset();
+                    return true;
                 }
             }
+            return false;
         }
 
-        return this;
-    }
-
-    /// <inheritdoc/>
-    public IDisposable Subscribe<TMessage>(IMessageSubscriber<TMessage> subscriber)
-        where TMessage : IMessage
-    {
-        return Subscribe(typeof(TMessage), subscriber);
-    }
-
-    /// <inheritdoc/>
-    public IDisposable Subscribe(Type messageType, IMessageSubscriber subscriber)
-    {
-        var subscriptionSet = _subscriptions.GetOrAdd(messageType, t => new(t));
-        return subscriptionSet.Add(subscriber);
-    }
-
-    private IEnumerable<Type> GetEmissionTypes(Type messageType)
-    {
-        // always emit the actual type
-        yield return messageType;
-
-        // walk class base types first
-        if (messageType.IsClass)
+        private MessageHandler<TPayload>[][] GetHandlers()
         {
-            Type? baseType = messageType;
-            while ((baseType = baseType?.BaseType) is not null)
+            var allHandlers = new MessageHandler<TPayload>[_handlerSets.Count][];
+
+            var i = 0;
+            foreach (var handlerSet in _handlerSets.Values)
             {
-                yield return baseType;
-                messageType = baseType;
-            }
-        }
-
-        // then all interfaces
-        foreach (var interfaceType in messageType.GetInterfaces())
-        {
-            yield return interfaceType;
-        }
-    }
-
-    /// <inheritdoc/>
-    public void HandleMessage(IMessage message)
-    {
-        Emit(message);
-    }
-
-    /// <inheritdoc/>
-    protected override void Dispose(bool disposing)
-    {
-        base.Dispose(disposing);
-        if (disposing)
-        {
-            parentSubscription?.Dispose();
-            _subscriptions.Clear();
-        }
-    }
-
-    internal void RegisterSubscribers()
-    {
-        foreach (var (subscriber, messageType) in GetRegisteredSubscribers(ctx))
-        {
-            Subscribe(messageType, subscriber);
-        }
-    }
-
-    private record SubscriptionSet(Type MessageType)
-    {
-        public SortedSet<Subscription> Subscriptions { get; } = new(SubscriptionComparer.Instance);
-        public ReaderWriterLockSlim Lock { get; } = new();
-
-        public IDisposable Add(IMessageSubscriber subscriber)
-        {
-            Lock.EnterWriteLock();
-            try
-            {
-                Subscriptions.Add(new(subscriber));
-            }
-            finally
-            {
-                Lock.ExitWriteLock();
+                var handlers = new MessageHandler<TPayload>[handlerSet.Count];
+                handlerSet.CopyTo(handlers, 0);
+                allHandlers[i++] = handlers;
             }
 
-            return new DisposalAction(() =>
-            {
-                Lock.EnterWriteLock();
-                try
-                {
-                    Subscriptions.RemoveWhere(s => s.Subscriber == subscriber);
-                }
-                finally
-                {
-                    Lock.ExitWriteLock();
-                }
-            });
+            return allHandlers;
         }
-    }
 
-    private class Subscription(IMessageSubscriber subscriber)
-    {
-        public IMessageSubscriber Subscriber { get; } = subscriber;
-        public sbyte Priority { get; } = subscriber.Priority;
-    }
-
-    private class SubscriptionComparer : IComparer<Subscription>
-    {
-        public static readonly SubscriptionComparer Instance = new();
-
-        public int Compare(Subscription? x, Subscription? y)
+        public void Dispose()
         {
-            if (x is null || y is null)
-            {
-                throw new ArgumentNullException(x is null ? nameof(x) : nameof(y));
-            }
+            _handlerSets.Clear();
+        }
 
-            return y.Priority.CompareTo(x.Priority);
+        public IEnumerable<Task> Invoke(IMessage message, CancellationToken cancellationToken)
+        {
+            var handlers = Handlers.Value;
+            foreach (var handler in handlers.SelectMany(i => i))
+            {
+                yield return handler.Invoke((IMessage<TPayload>)message, cancellationToken);
+            }
         }
     }
 }
