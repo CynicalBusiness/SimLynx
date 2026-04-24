@@ -1,9 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Autofac;
-using Microsoft.Extensions.Logging;
 using SimLynx.Core.Phasing;
 using SimLynx.Simulation;
 
@@ -18,40 +12,11 @@ public class DesignPhase : Phase
     /// <summary>
     /// ID of the phase, used for keying dependencies.
     /// </summary>
-    public static readonly Symbol PhaseId = nameof(DesignPhase);
-    private readonly IEnumerable<IDesignService> designServices;
+    public static readonly string PhaseId = nameof(DesignPhase);
 
     /// <inheritdoc cref="DesignPhase"/>
-    public DesignPhase(IEnumerable<IDesignService> designServices)
+    public DesignPhase()
     {
-        this.designServices = designServices;
         NextPhaseId = SimulationPhase.PhaseId;
-    }
-
-    /// <inheritdoc/>
-    protected override Task RunPhase(CancellationToken cancellationToken)
-    {
-        return Task.WhenAll(designServices.Select(s => s.RunDesignAsync(cancellationToken)));
-    }
-
-    /// <summary>
-    /// Builder for the <see cref="DesignPhase"/>.
-    /// </summary>
-    public class Builder(
-        ILogger<Builder> logger,
-        ILifetimeScope scope,
-        IEnumerable<IDesignRegistrationProvider> designProviders
-    ) : PhaseBuilder<DesignPhase>(logger, scope)
-    {
-        /// <inheritdoc/>
-        protected override void ConfigureContainer(ContainerBuilder builder)
-        {
-            base.ConfigureContainer(builder);
-
-            foreach (var provider in designProviders)
-            {
-                provider.ConfigureDesign(builder);
-            }
-        }
     }
 }

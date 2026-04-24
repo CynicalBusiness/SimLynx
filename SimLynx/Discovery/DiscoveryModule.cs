@@ -8,7 +8,6 @@ internal class DiscoveryModule : Module
     protected override void Load(ContainerBuilder builder)
     {
         base.Load(builder);
-
-        builder.RegisterPhase<DiscoveryPhase, DiscoveryPhase.Builder>(DiscoveryPhase.PhaseId);
+        builder.RegisterPhase<DiscoveryPhase>(DiscoveryPhase.PhaseId);
     }
 }

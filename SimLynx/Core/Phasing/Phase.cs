@@ -1,6 +1,8 @@
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
+using SimLynx.Core.Hooks;
 
 namespace SimLynx.Core.Phasing;
 
@@ -9,6 +11,11 @@ namespace SimLynx.Core.Phasing;
 /// </summary>
 public abstract class Phase : IPhase
 {
+    private static readonly MethodInfo InvokeRunHookMethod = typeof(Phase).GetMethod(
+        nameof(InvokeRunHook),
+        BindingFlags.Instance | BindingFlags.NonPublic
+    )!;
+
     private Task? runTask;
 
     /// <inheritdoc/>
@@ -31,5 +38,15 @@ public abstract class Phase : IPhase
     /// </summary>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A task that represents the operation.</returns>
-    protected abstract Task RunPhase(CancellationToken cancellationToken);
+    protected virtual Task RunPhase(CancellationToken cancellationToken)
+    {
+        return (Task)InvokeRunHookMethod.MakeGenericMethod(GetType()).Invoke(this, []);
+    }
+
+    private Task InvokeRunHook<TPhase>()
+        where TPhase : Phase
+    {
+        var hook = Scope.Resolve<Hook<OnPhaseRun<TPhase>>>();
+        return hook.Invoke(new OnPhaseRun<TPhase>((TPhase)this));
+    }
 }

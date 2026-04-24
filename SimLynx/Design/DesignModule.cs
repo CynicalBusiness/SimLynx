@@ -9,6 +9,6 @@ internal class DesignModule : Module
     {
         base.Load(builder);
 
-        builder.RegisterPhase<DesignPhase, DesignPhase.Builder>(DesignPhase.PhaseId);
+        builder.RegisterPhase<DesignPhase>(DesignPhase.PhaseId);
     }
 }

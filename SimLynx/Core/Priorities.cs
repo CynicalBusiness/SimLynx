@@ -20,7 +20,7 @@ public static class Priorities
     /// <summary>
     /// The default "normal" priority level.
     /// </summary>
-    public const sbyte Normal = default;
+    public const sbyte Default = default;
 
     /// <summary>
     /// A high priority level, above the default.

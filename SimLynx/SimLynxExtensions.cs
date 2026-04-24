@@ -143,7 +143,7 @@ public static class SimLynxExtensions
         }
     }
 
-    extension(ArgumentNullException)
+    extension(ArgumentException)
     {
 #if !NET6_0_OR_GREATER
         // polyfill the static ArgumentNullException methods

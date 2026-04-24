@@ -16,14 +16,12 @@ public static class PhaseExtensions
         /// Registers a phase and its manager in the DI container, with the given phase ID as the key.
         /// </summary>
         /// <typeparam name="TPhase"></typeparam>
-        /// <typeparam name="TPhaseManager"></typeparam>
         /// <param name="phaseId"></param>
         /// <returns></returns>
-        public IModuleRegistrar RegisterPhase<TPhase, TPhaseManager>(string phaseId)
+        public IModuleRegistrar RegisterPhase<TPhase>(string phaseId)
             where TPhase : class, IPhase
-            where TPhaseManager : class, IPhaseBuilder<TPhase>
         {
-            return builder.RegisterModule(new PhaseModule<TPhase, TPhaseManager>(phaseId));
+            return builder.RegisterModule(new PhaseModule<TPhase>(phaseId));
         }
     }
 

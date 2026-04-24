@@ -9,6 +9,6 @@ internal class SimulationModule : Module
     {
         base.Load(builder);
 
-        builder.RegisterPhase<SimulationPhase, SimulationPhase.Builder>(SimulationPhase.PhaseId);
+        builder.RegisterPhase<SimulationPhase>(SimulationPhase.PhaseId);
     }
 }

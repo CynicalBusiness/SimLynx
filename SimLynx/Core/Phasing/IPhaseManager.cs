@@ -17,5 +17,5 @@ public interface IPhaseManager
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>A task that represents the run of each phase in the chain.</returns>
     /// <exception cref="ArgumentException">If no phase builder is registered for the given phase ID.</exception>
-    public Task StartAsync(Symbol phaseId, CancellationToken cancellationToken = default);
+    public Task StartAsync(string phaseId, CancellationToken cancellationToken = default);
 }

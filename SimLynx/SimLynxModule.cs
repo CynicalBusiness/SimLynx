@@ -1,8 +1,8 @@
 using Autofac;
 using Microsoft.Extensions.Logging;
 using SimLynx.Core;
+using SimLynx.Core.Hooks;
 using SimLynx.Core.Logging;
-using SimLynx.Core.Messaging;
 using SimLynx.Core.Phasing;
 using SimLynx.Design;
 using SimLynx.Discovery;
@@ -26,7 +26,7 @@ public class SimLynxModule<TApp> : Module
 
         // core modules
         builder.RegisterModule<LoggingModule>().IfNotRegistered(typeof(ILogger));
-        builder.RegisterModule<MessagingModule>();
+        builder.RegisterModule<HooksModule>();
 
         // phase modules
         builder.RegisterModule<PhaseModule>();

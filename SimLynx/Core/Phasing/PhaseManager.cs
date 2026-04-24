@@ -7,7 +7,7 @@ using SimLynx.Core.Logging;
 
 namespace SimLynx.Core.Phasing;
 
-internal class PhaseManager(ILogger<PhaseManager> logger, IIndex<Symbol, IPhaseBuilder> phaseBuilders) : IPhaseManager
+internal class PhaseManager(ILogger<PhaseManager> logger, IIndex<string, IPhaseBuilder> phaseBuilders) : IPhaseManager
 {
     public static readonly LogEvent<string> PhaseStartLogEvent = new(
         EventId.For<PhaseManager>("PhaseStart"),
@@ -28,9 +28,9 @@ internal class PhaseManager(ILogger<PhaseManager> logger, IIndex<Symbol, IPhaseB
         LogLevel.Debug
     );
 
-    public async Task StartAsync(Symbol phaseId, CancellationToken cancellationToken = default)
+    public async Task StartAsync(string phaseId, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNullOrWhiteSpace(phaseId, nameof(phaseId));
+        ArgumentException.ThrowIfNullOrWhiteSpace(phaseId, nameof(phaseId));
 
         if (!phaseBuilders.TryGetValue(phaseId, out var builder))
         {

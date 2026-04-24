@@ -4,6 +4,7 @@ using Autofac;
 using Autofac.Core;
 using Autofac.Features.OwnedInstances;
 using Microsoft.Extensions.Logging;
+using SimLynx.Core.Hooks;
 using SimLynx.Core.Logging;
 
 namespace SimLynx.Core.Phasing;
@@ -11,8 +12,13 @@ namespace SimLynx.Core.Phasing;
 /// <summary>
 /// Base implementation for a phase manager, with extra support for only-once initialization and chaining.
 /// </summary>
-public abstract class PhaseBuilder<TPhase>(ILogger<PhaseBuilder<TPhase>> logger, ILifetimeScope currentScope)
-    : IPhaseBuilder<TPhase>
+public class PhaseBuilder<TPhase>(
+    string phaseId,
+    ILogger<PhaseBuilder<TPhase>> logger,
+    ILifetimeScope currentScope,
+    Hook<OnPhaseConfigure<TPhase>> configureHook,
+    Hook<OnPhaseInit<TPhase>> initHook
+) : IPhaseBuilder<TPhase>
     where TPhase : IPhase
 {
     /// <summary>
@@ -30,6 +36,11 @@ public abstract class PhaseBuilder<TPhase>(ILogger<PhaseBuilder<TPhase>> logger,
     /// Whether or not this manager has initialized yet.
     /// </summary>
     public bool IsInitialized => _initTask is not null;
+
+    /// <summary>
+    /// ID of the phase this builder is building.
+    /// </summary>
+    public string PhaseId { get; } = phaseId;
 
     /// <summary>
     /// Resets the initialization state of this manager, allowing it to be initialized again.
@@ -58,14 +69,14 @@ public abstract class PhaseBuilder<TPhase>(ILogger<PhaseBuilder<TPhase>> logger,
     }
 
     /// <summary>
-    /// Performance initialization for this manager. Even if <see cref="BuildAsync"/> is called more than once, this method
+    /// Performs initialization for this manager. Even if <see cref="BuildAsync"/> is called more than once, this method
     /// will only be invoked once, and will be awaited during the first call to <see cref="BuildAsync"/>.
     /// </summary>
     /// <param name="cancellationToken">A token to abort the initialization process.</param>
     /// <returns>A task that represents the initialization operation.</returns>
     protected virtual Task Init(CancellationToken cancellationToken)
     {
-        return Task.CompletedTask;
+        return initHook.Invoke(new OnPhaseInit<TPhase>(PhaseId), cancellationToken);
     }
 
     /// <summary>
@@ -74,7 +85,7 @@ public abstract class PhaseBuilder<TPhase>(ILogger<PhaseBuilder<TPhase>> logger,
     /// <param name="builder">The <see cref="ContainerBuilder"/> instance to configure.</param>
     protected virtual void ConfigureContainer(ContainerBuilder builder)
     {
-        // do nothing by default
+        configureHook.Invoke(new OnPhaseConfigure<TPhase>(PhaseId, builder)).Wait();
     }
 
     private Task TryInit(CancellationToken cancellationToken)
@@ -92,7 +103,7 @@ public abstract class PhaseBuilder<TPhase>(ILogger<PhaseBuilder<TPhase>> logger,
             _initTaskLock.EnterWriteLock();
             try
             {
-                InitLogEvent.Log(logger, typeof(TPhase).ToString());
+                InitLogEvent.Log(logger, PhaseId);
                 return _initTask = Init(cancellationToken);
             }
             finally
