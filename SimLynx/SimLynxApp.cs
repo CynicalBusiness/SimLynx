@@ -6,10 +6,8 @@ using System.Threading.Tasks;
 using Autofac;
 using Semver;
 using SimLynx.Core.Phasing;
-using SimLynx.Design;
 using SimLynx.Discovery;
 using SimLynx.Discovery.Content;
-using SimLynx.Simulation;
 
 namespace SimLynx;
 
@@ -21,11 +19,7 @@ namespace SimLynx;
 /// For most use-cases, your main application class should extend from this class.
 /// <br/>
 /// </remarks>
-public abstract class SimLynxApp
-    : IContentPackage,
-        IDiscoveryRegistrationProvider,
-        IDesignRegistrationProvider,
-        ISimulationRegistrationProvider
+public abstract class SimLynxApp : IContentPackage
 {
     /// <summary>
     /// Initializes a new app instance.
@@ -61,24 +55,6 @@ public abstract class SimLynxApp
     public virtual Task RunAsync(CancellationToken cancellationToken)
     {
         return Scope.BeginPhase(InitialPhaseId, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public virtual void ConfigureDiscovery(ContainerBuilder builder)
-    {
-        // default no-op
-    }
-
-    /// <inheritdoc/>
-    public virtual void ConfigureDesign(ContainerBuilder builder)
-    {
-        // default no-op
-    }
-
-    /// <inheritdoc/>
-    public virtual void ConfigureSimulation(ContainerBuilder builder)
-    {
-        // default no-op
     }
 
     /// <summary>

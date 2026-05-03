@@ -17,14 +17,26 @@ public static class LogActions
     public static LogAction Define(EventId eventId, string message, LogLevel logLevel = LogLevel.Information)
     {
         var action = LoggerMessage.Define(logLevel, eventId, message);
-        return (logger, exception) => action(logger, exception);
+        return (logger, exception) =>
+        {
+            if (logger is not null)
+            {
+                action.Invoke(logger, exception);
+            }
+        };
     }
 
     /// <inheritdoc cref="Define(EventId, string, LogLevel)"/>
     public static LogAction<T1> Define<T1>(EventId eventId, string message, LogLevel logLevel = LogLevel.Information)
     {
         var action = LoggerMessage.Define<T1>(logLevel, eventId, message);
-        return (logger, arg1, exception) => action(logger, arg1, exception);
+        return (logger, arg1, exception) =>
+        {
+            if (logger is not null)
+            {
+                action.Invoke(logger, arg1, exception);
+            }
+        };
     }
 
     /// <inheritdoc cref="Define(EventId, string, LogLevel)"/>
@@ -35,7 +47,13 @@ public static class LogActions
     )
     {
         var action = LoggerMessage.Define<T1, T2>(logLevel, eventId, message);
-        return (logger, arg1, arg2, exception) => action(logger, arg1, arg2, exception);
+        return (logger, arg1, arg2, exception) =>
+        {
+            if (logger is not null)
+            {
+                action.Invoke(logger, arg1, arg2, exception);
+            }
+        };
     }
 
     /// <inheritdoc cref="Define(EventId, string, LogLevel)"/>
@@ -46,7 +64,13 @@ public static class LogActions
     )
     {
         var action = LoggerMessage.Define<T1, T2, T3>(logLevel, eventId, message);
-        return (logger, arg1, arg2, arg3, exception) => action(logger, arg1, arg2, arg3, exception);
+        return (logger, arg1, arg2, arg3, exception) =>
+        {
+            if (logger is not null)
+            {
+                action.Invoke(logger, arg1, arg2, arg3, exception);
+            }
+        };
     }
 
     /// <inheritdoc cref="Define(EventId, string, LogLevel)"/>
@@ -57,7 +81,13 @@ public static class LogActions
     )
     {
         var action = LoggerMessage.Define<T1, T2, T3, T4>(logLevel, eventId, message);
-        return (logger, arg1, arg2, arg3, arg4, exception) => action(logger, arg1, arg2, arg3, arg4, exception);
+        return (logger, arg1, arg2, arg3, arg4, exception) =>
+        {
+            if (logger is not null)
+            {
+                action.Invoke(logger, arg1, arg2, arg3, arg4, exception);
+            }
+        };
     }
 
     /// <inheritdoc cref="Define(EventId, string, LogLevel)"/>
@@ -69,6 +99,11 @@ public static class LogActions
     {
         var action = LoggerMessage.Define<T1, T2, T3, T4, T5>(logLevel, eventId, message);
         return (logger, arg1, arg2, arg3, arg4, arg5, exception) =>
-            action(logger, arg1, arg2, arg3, arg4, arg5, exception);
+        {
+            if (logger is not null)
+            {
+                action.Invoke(logger, arg1, arg2, arg3, arg4, arg5, exception);
+            }
+        };
     }
 }

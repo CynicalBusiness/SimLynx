@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Concurrent;
+using System.Threading.Tasks;
 using Autofac;
 using Autofac.Builder;
 using Autofac.Core;
+using Microsoft.Extensions.Logging;
 
 namespace SimLynx.Core.Hooks;
 
@@ -10,6 +13,73 @@ namespace SimLynx.Core.Hooks;
 /// </summary>
 public static class HookExtensions
 {
+    extension<TPayload>(IHookable<TPayload> @this)
+    {
+        /// <inheritdoc cref="IHookable{TPayload}.Subscribe(IHookHandler{TPayload})"/>
+        /// <param name="handler">The handler to subscribe.</param>
+        /// <param name="priority">Overrides the default priority of the handler.</param>
+        public IDisposable Subscribe(IHookHandler<TPayload> handler, sbyte priority = Priorities.Default)
+        {
+            return @this.Subscribe(new HookHandler<TPayload>(handler.HandleHook, handler.Source, priority));
+        }
+
+        /// <summary>
+        /// Helper for subscribing to a hook with a simple delegate, using the provided priority or the default if not
+        /// specified.
+        /// </summary>
+        /// <param name="handler">The handler delegate to subscribe.</param>
+        /// <param name="priority">The priority of the handler.</param>
+        /// <param name="source">The source object for the handler.</param>
+        /// <returns>A disposable to unsubscribe the handler.</returns>
+        public IDisposable Subscribe(
+            HookHandlerFunc<TPayload> handler,
+            object? source = null,
+            sbyte priority = Priorities.Default
+        )
+        {
+            return @this.Subscribe(new HookHandler<TPayload>(handler, source, priority));
+        }
+
+        /// <summary>
+        /// Pipes the result of this hook to the given <paramref name="targetHook"/>, invoking the target hook with
+        /// each invocation of this hook and returning the invocation task from the target after mapping the payload
+        /// with the provided <paramref name="mapFunc"/>.
+        /// </summary>
+        /// <typeparam name="TTarget">The target hook type</typeparam>
+        /// <param name="targetHook">The target hook to pipe to.</param>
+        /// <param name="mapFunc">A function to map the payload from this hook to the target hook.</param>
+        /// <param name="priority">The priority of the subscription.</param>
+        /// <returns>A disposable to unsubscribe the pipe.</returns>
+        public IDisposable PipeTo<TTarget>(
+            IHookInvocable<TTarget> targetHook,
+            Func<TPayload, TTarget> mapFunc,
+            sbyte priority = Priorities.Default
+        )
+        {
+            return @this.Subscribe((payload, context) => targetHook.Invoke(mapFunc(payload), context), priority);
+        }
+    }
+
+    /// <summary>
+    /// Pipes the result of this hook to the given <paramref name="targetHook"/>, invoking the target hook with
+    /// each invocation of this hook and returning the invocation task from the target.
+    /// </summary>
+    /// <typeparam name="TPayload">The type of the payload for this hook.</typeparam>
+    /// <typeparam name="TTarget">The type of the payload for the target hook.</typeparam>
+    /// <param name="this">The hook to pipe from.</param>
+    /// <param name="targetHook">The target hook to pipe to.</param>
+    /// <param name="priority">The priority of the subscription.</param>
+    /// <returns>A disposable to unsubscribe the pipe.</returns>
+    public static IDisposable PipeTo<TPayload, TTarget>(
+        this IHookable<TPayload> @this,
+        IHookInvocable<TTarget> targetHook,
+        sbyte priority = Priorities.Default
+    )
+        where TPayload : TTarget
+    {
+        return @this.PipeTo(targetHook, payload => payload, priority);
+    }
+
     extension(ContainerBuilder @this)
     {
         /// <summary>
@@ -40,9 +110,9 @@ public static class HookExtensions
             TPayload,
             THook
         >()
-            where THook : Hook<TPayload>
+            where THook : IHook<TPayload>
         {
-            return @this.RegisterType<THook>().AsSelf().As<Hook<TPayload>>().SingleInstance();
+            return @this.RegisterType<THook>().ApplyHookDefaults(typeof(TPayload));
         }
 
         /// <summary>
@@ -58,7 +128,7 @@ public static class HookExtensions
             Type payloadType
         )
         {
-            return @this.RegisterHook(payloadType, typeof(Hook<>));
+            return @this.RegisterHook(payloadType, typeof(IHook<>));
         }
 
         /// <summary>
@@ -82,7 +152,7 @@ public static class HookExtensions
             {
                 hookType = hookType.MakeGenericType(payloadType);
             }
-            var baseHookType = typeof(Hook<>).MakeGenericType(payloadType);
+            var baseHookType = typeof(IHook<>).MakeGenericType(payloadType);
             if (!hookType.IsAssignableTo(baseHookType))
             {
                 throw new ArgumentException(
@@ -91,11 +161,29 @@ public static class HookExtensions
                 );
             }
 
-            return @this.RegisterType(hookType).AsSelf().As(baseHookType).SingleInstance();
+            return @this.RegisterType(hookType).ApplyHookDefaults(payloadType);
         }
     }
 
-    extension<TPayload, TActivatorData, TStyle>(IRegistrationBuilder<Hook<TPayload>, TActivatorData, TStyle> @this)
+    extension<TLimit>(IRegistrationBuilder<TLimit, ConcreteReflectionActivatorData, SingleRegistrationStyle> @this)
+    {
+        private IRegistrationBuilder<
+            TLimit,
+            ConcreteReflectionActivatorData,
+            SingleRegistrationStyle
+        > ApplyHookDefaults(Type payloadType)
+        {
+            return @this
+                .AsSelf()
+                .As<IHook>()
+                .As(typeof(IHook<>).MakeGenericType(payloadType))
+                .As(typeof(IHookable<>).MakeGenericType(payloadType))
+                .As(typeof(IHookInvocable<>).MakeGenericType(payloadType))
+                .SingleInstance();
+        }
+    }
+
+    extension<TPayload, TActivatorData, TStyle>(IRegistrationBuilder<IHookable<TPayload>, TActivatorData, TStyle> @this)
     {
         /// <summary>
         /// Pipes a <typeparamref name="TPayload"/> hook to a <typeparamref name="TTarget"/> hook by subscribing to the
@@ -104,7 +192,7 @@ public static class HookExtensions
         /// <typeparam name="TTarget">The type of the payload for the target hook.</typeparam>
         /// <param name="mapFunc">The function to map the payload from the source hook to the target hook.</param>
         /// <returns>The registration builder for the hook.</returns>
-        public IRegistrationBuilder<Hook<TPayload>, TActivatorData, TStyle> WithPipe<TTarget>(
+        public IRegistrationBuilder<IHookable<TPayload>, TActivatorData, TStyle> WithPipe<TTarget>(
             Func<TPayload, TTarget> mapFunc
         )
         {
@@ -113,15 +201,15 @@ public static class HookExtensions
                 .OnActivated(
                     (e) =>
                     {
-                        var targetHook = e.Context.Resolve<Hook<TTarget>>();
-                        sub = e.Instance.Subscribe((payload, context) => targetHook.Invoke(mapFunc(payload), context));
+                        var targetHook = e.Context.Resolve<IHookInvocable<TTarget>>();
+                        sub = e.Instance.PipeTo(targetHook, mapFunc);
                     }
                 )
                 .OnRelease((e) => sub?.Dispose());
         }
     }
 
-    extension<TPayload, TActivatorData, TStyle>(IRegistrationBuilder<Hook<TPayload>, TActivatorData, TStyle> @this)
+    extension<TPayload, TActivatorData, TStyle>(IRegistrationBuilder<IHook<TPayload>, TActivatorData, TStyle> @this)
         where TActivatorData : ReflectionActivatorData
     {
         /// <summary>
@@ -129,7 +217,7 @@ public static class HookExtensions
         /// </summary>
         /// <param name="deliveryStrategy">The delivery strategy to apply.</param>
         /// <returns>The registration builder for the hook.</returns>
-        public IRegistrationBuilder<Hook<TPayload>, TActivatorData, TStyle> WithDeliveryStrategy(
+        public IRegistrationBuilder<IHook<TPayload>, TActivatorData, TStyle> WithDeliveryStrategy(
             IHookDeliveryStrategy deliveryStrategy
         )
         {
@@ -142,16 +230,53 @@ public static class HookExtensions
         /// </summary>
         /// <param name="deliveryStrategyType">The delivery strategy to apply.</param>
         /// <returns>The registration builder for the hook.</returns>
-        public IRegistrationBuilder<Hook<TPayload>, TActivatorData, TStyle> WithDeliveryStrategy(
+        public IRegistrationBuilder<IHook<TPayload>, TActivatorData, TStyle> WithDeliveryStrategy(
             Type deliveryStrategyType
         )
         {
             return @this.WithParameter(
                 new ResolvedParameter(
-                    (pi, ctx) => pi.ParameterType == typeof(IHookDeliveryStrategy),
+                    (pi, ctx) => deliveryStrategyType.IsAssignableTo(pi.ParameterType),
                     (pi, ctx) => ctx.Resolve(deliveryStrategyType)
                 )
             );
+        }
+    }
+
+    extension<TLimit, TActivatorData, TStyle>(IRegistrationBuilder<TLimit, TActivatorData, TStyle> @this)
+        where TLimit : notnull
+    {
+        /// <summary>
+        /// Helper for subscribing to a hook when the registered type is activated, then disposing automatically when
+        /// the released.
+        /// </summary>
+        /// <typeparam name="TPayload">The type of the payload for the hook.</typeparam>
+        /// <param name="getHandler">A function to get the handler to subscribe from the activation context.</param>
+        /// <returns>The registration builder for the hook.</returns>
+        public IRegistrationBuilder<TLimit, TActivatorData, TStyle> OnHook<TPayload>(
+            Func<IActivatedEventArgs<TLimit>, IHookHandler<TPayload>> getHandler
+        )
+        {
+            var dict = new ConcurrentDictionary<TLimit, IDisposable>();
+            @this
+                .OnActivated(
+                    (@event) =>
+                    {
+                        var handler = getHandler(@event);
+                        var hook = @event.Context.Resolve<IHookable<TPayload>>();
+                        dict[@event.Instance] = hook.Subscribe(handler);
+                    }
+                )
+                .OnRelease(
+                    (limit) =>
+                    {
+                        if (dict.TryRemove(limit, out var sub))
+                        {
+                            sub.Dispose();
+                        }
+                    }
+                );
+            return @this;
         }
     }
 }

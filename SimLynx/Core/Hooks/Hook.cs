@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,53 +14,85 @@ namespace SimLynx.Core.Hooks;
 /// This class is thread-safe for (un)subscription and invocation.
 /// </remarks>
 /// <typeparam name="TPayload">The type of payload the hook carries.</typeparam>
-/// <param name="deliveryStrategy">The strategy to use for delivering hook invocations to subscribers.</param>
-public class Hook<TPayload>(IHookDeliveryStrategy deliveryStrategy) : IDisposable
+public class Hook<TPayload> : IHook<TPayload>, IDisposable
 {
-    private readonly SortedDictionary<sbyte, LinkedList<HookHandler<TPayload>>> _handlerMap = new(
+    private readonly SortedDictionary<sbyte, LinkedList<IHookHandler<TPayload>>> _handlerMap = new(
         PriorityComparer.Default
     );
     private readonly ReaderWriterLockSlim _lock = new();
+
+    /// <summary>
+    /// Event raised before invoking handlers for a hook invocation. Handlers subscribed to this event will be invoked
+    /// before any handlers subscribed to the hook itself, and will not be affected by the hook delivery strategy.
+    /// </summary>
+    public event Action<TPayload, HookContext>? OnBeforeInvoke;
+
+    /// <summary>
+    /// Event raised after invoking handlers for a hook invocation. Handlers subscribed to this event will be invoked
+    /// after all handlers subscribed to the hook itself have completed, and will not be affected by the hook delivery
+    /// strategy.
+    /// </summary>
+    public event Action<TPayload, HookContext>? OnAfterInvoke;
+
+    /// <summary>
+    /// Event raised if an exception is thrown during the invocation of any handler for a hook invocation. Handlers
+    /// subscribed to this event will be invoked immediately when an exception is thrown, and will receive the
+    /// exception as a parameter. They will not be affected by the hook delivery strategy.
+    /// </summary>
+    public event Action<TPayload, HookContext, Exception>? OnInvokeError;
+
+    /// <summary>
+    /// The strategy to use for delivering hook invocations to subscribers.
+    /// </summary>
+    protected readonly IHookDeliveryStrategy deliveryStrategy;
+
+    /// <summary>
+    /// Creates a new hook with the given delivery strategy and initial handlers.
+    /// </summary>
+    /// <param name="deliveryStrategy">The strategy to use for delivering hook invocations to subscribers.</param>
+    /// <param name="handlers">The initial handlers to subscribe to this hook.</param>
+    public Hook(IHookDeliveryStrategy deliveryStrategy, IEnumerable<IHookHandler<TPayload>>? handlers = null)
+    {
+        ArgumentNullException.ThrowIfNull(deliveryStrategy);
+        this.deliveryStrategy = deliveryStrategy;
+
+        if (handlers is not null)
+        {
+            foreach (var handler in handlers)
+            {
+                this.Subscribe(handler);
+            }
+        }
+    }
 
     /// <summary>
     /// Token to signal cancellation of this hook.
     /// </summary>
     protected readonly CancellationTokenSource cancellation = new();
 
-    /// <summary>
-    /// Dispatches an invocation containing the provided <paramref name="payload"/> on this hook to all subscribers,
-    /// according to the hook's delivery strategy.
-    /// </summary>
-    /// <param name="payload">The payload to be delivered to subscribers.</param>
-    /// <param name="cancellationToken">A token to observe while waiting for the dispatch to complete.</param>
-    /// <returns>A task that completes once all subscribers have completed.</returns>
+    /// <inheritdoc/>
     public virtual Task Invoke(TPayload payload, CancellationToken cancellationToken = default)
     {
         return Invoke(payload, PrepareContext(cancellationToken));
     }
 
-    /// <summary>
-    /// Dispatches an invocation containing the provided <paramref name="payload"/> on this hook to all subscribers,
-    /// using the provided <paramref name="context"/>, according to the hook's delivery strategy.
-    /// </summary>
-    /// <param name="payload">The payload to be delivered to subscribers.</param>
-    /// <param name="context">The context in which the hook is being invoked.</param>
-    /// <returns>A task that completes once all subscribers have completed.</returns>
+    /// <inheritdoc/>
     public virtual async Task Invoke(TPayload payload, HookContext context)
     {
+        OnBeforeInvoke?.Invoke(payload, context);
+
         // store the current handlers in an array so we can release the lock before actually invoking them.
-        var handlerArrays = new HookHandler<TPayload>[_handlerMap.Count][];
+        var handlerMap = new Dictionary<sbyte, IReadOnlyCollection<IHookHandler<TPayload>>>();
 
         _lock.EnterReadLock();
         try
         {
-            var i = 0;
-            foreach (var handlers in _handlerMap.Values)
+            foreach (var (priority, handlers) in _handlerMap)
             {
                 // the dictionary keeps this in priority order already
-                var handlerArray = new HookHandler<TPayload>[handlers.Count];
+                var handlerArray = new IHookHandler<TPayload>[handlers.Count];
                 handlers.CopyTo(handlerArray, 0);
-                handlerArrays[i++] = handlerArray;
+                handlerMap[priority] = handlerArray;
             }
         }
         finally
@@ -67,27 +100,33 @@ public class Hook<TPayload>(IHookDeliveryStrategy deliveryStrategy) : IDisposabl
             _lock.ExitReadLock();
         }
 
+        var stopwatch = Stopwatch.StartNew();
+
         // TODO investigate SynchronizationContext and TaskScheduler to better handle these invocations
-        foreach (var handlerArray in handlerArrays)
+        try
         {
-            await deliveryStrategy.Deliver(payload, context, handlerArray).ConfigureAwait(false);
+            await deliveryStrategy.Deliver(payload, context, handlerMap).ConfigureAwait(false);
         }
+        catch (Exception ex)
+        {
+            OnInvokeError?.Invoke(payload, context, ex);
+            throw;
+        }
+
+        stopwatch.Stop();
+        OnAfterInvoke?.Invoke(payload, context);
     }
 
-    /// <summary>
-    /// Subscribes a <paramref name="handler"/> to this hook with the specified <paramref name="priority"/>.
-    /// </summary>
-    /// <param name="handler">The handler to subscribe.</param>
-    /// <param name="priority">The priority of the handler.</param>
-    /// <returns>An <see cref="IDisposable"/> that can be used to unsubscribe the handler.</returns>
-    public virtual IDisposable Subscribe(HookHandler<TPayload> handler, sbyte priority)
+    /// <inheritdoc/>
+    public virtual IDisposable Subscribe(IHookHandler<TPayload> handler)
     {
+        var priority = handler.Priority;
         _lock.EnterWriteLock();
         try
         {
             if (!_handlerMap.TryGetValue(priority, out var handlers))
             {
-                handlers = new LinkedList<HookHandler<TPayload>>();
+                handlers = new LinkedList<IHookHandler<TPayload>>();
                 _handlerMap.Add(priority, handlers);
             }
 
@@ -113,26 +152,6 @@ public class Hook<TPayload>(IHookDeliveryStrategy deliveryStrategy) : IDisposabl
         {
             _lock.ExitWriteLock();
         }
-    }
-
-    /// <summary>
-    /// Subscribes a <paramref name="handler"/> to this hook with the default priority.
-    /// </summary>
-    /// <param name="handler">The handler to subscribe.</param>
-    /// <returns>An <see cref="IDisposable"/> that can be used to unsubscribe the handler.</returns>
-    public virtual IDisposable Subscribe(HookHandler<TPayload> handler)
-    {
-        return Subscribe(handler, Priorities.Default);
-    }
-
-    /// <summary>
-    /// Subscribes the provided <paramref name="handler"/> to this hook with the handler's defined priority.
-    /// </summary>
-    /// <param name="handler">The handler to subscribe.</param>
-    /// <returns>An <see cref="IDisposable"/> that can be used to unsubscribe the handler.</returns>
-    public virtual IDisposable Subscribe(IHookHandler<TPayload> handler)
-    {
-        return Subscribe(handler.HandleHook, handler.Priority);
     }
 
     /// <summary>

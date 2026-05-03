@@ -14,6 +14,7 @@ namespace SimLynx.Core;
 /// <typeparam name="T">The type of elements in the set.</typeparam>
 /// <param name="comparer">The equality comparer to use for the set.</param>
 public class LinkedSet<T>(IEqualityComparer<T> comparer) : ICollection<T>
+    where T : notnull
 {
     private readonly Dictionary<T, LinkedListNode<T>> _index = new(comparer);
     private readonly LinkedList<T> _list = [];

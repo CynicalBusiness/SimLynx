@@ -1,6 +1,8 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
+using Autofac.Builder;
 using Autofac.Core.Registration;
 
 namespace SimLynx.Core.Phasing;
@@ -22,6 +24,24 @@ public static class PhaseExtensions
             where TPhase : class, IPhase
         {
             return builder.RegisterModule(new PhaseModule<TPhase>(phaseId));
+        }
+    }
+
+    extension<TLimit, TData, TStyle>(IRegistrationBuilder<TLimit, TData, TStyle> @this)
+    {
+        /// <summary>
+        /// Configures a service to be registered such that it will have one instance per <paramref name="phaseType"/>.
+        /// </summary>
+        /// <remarks>
+        /// Follows the behavior of
+        /// <see cref="IRegistrationBuilder{TLimit, TData, TStyle}.InstancePerMatchingLifetimeScope"/> with the
+        /// appropriate tag for the phase.
+        /// </remarks>
+        /// <param name="phaseType">The phase type whose lifetime scope should own the instance.</param>
+        /// <returns></returns>
+        public IRegistrationBuilder<TLimit, TData, TStyle> InstancePerPhase(Type phaseType)
+        {
+            return @this.InstancePerMatchingLifetimeScope(Phase.GetLifetimeScopeTag(phaseType));
         }
     }
 

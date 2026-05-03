@@ -107,6 +107,19 @@ containerBuilder.RegisterModule<SimLynxModule<MyGameApp>>();
 
 For other containers, you can use the relevant container bridge or simply run SimLynx in self-contained mode wrapped in the method of your choosing.
 
+```csharp
+
+vat cts = new CancellationTokenSource();
+var handle = SimLynx.Run<MyGameApp>(cts.token);
+
+// handle can be used to manage your running app
+// TODO examples
+
+// then cancel the token to stop
+ctx.Cancel();
+
+```
+
 ### Phases of Operation
 
 The operation of SimLynx is broken into "phases," each with their own purpose.
@@ -133,8 +146,125 @@ In essence, prototypes define configuration for various components which can be 
 
 Most of SimLynx's core components are derived from prototypes, meaning most can be configured by content out-of-the-box. It is recommended, then, that your app's core components also be built using prototypes to benefit from these features.
 
-#### Learning by Example
+**!TODO** More detailed explanation once things are more fleshed out.
 
-Taking for example a colony-builder-style game, let's make a basic building.
+### Hooks
 
-**!TODO**
+Hooks are IoC tools for dispatching asynchronous events to a subscribers while also providing customizable control over how those subscriber's resulting tasks are handled. They also solve a similar problem to a message bus: provides a method of communicating _downward_ to descendant scopes rather than relying on interfaces registers in current/ancestor scopes.
+
+#### Why is this useful?
+
+In SimLynx's case, the most obvious use-case is the simulation and its update loop.
+
+Traditionally, one would create an interface for types that are interested in getting simulation updates, `ISimulationService` for example, that the simulation itself would then inject all components with that matching service. In a flatter scope hierarchy, this may work, but for SimLynx, the Simulation actually creates multiple layers of child scopes. Such an interface would get missed for child scopes without extra dedicate logic to resolve them from that new scope, and all child scopes, each time any are created, then properly dispose of them when those scopes do. This creates a highly complex structure of hard dependencies on child scopes, which risks capturing services from them and just adds a lot of code that would need to be duplicated for each instance.
+
+Hooks solve this problem, while also introducing two additional features: customizing of Task-management for async subscribers, and a priority system for organizing subscribers.
+
+#### How do they work?
+
+Interested parties inject the hook and register to it:
+
+```csharp
+public class MySimulationService : IDisposable
+{
+
+    private readonly IDisposable _simulationUpdateSubscription;
+
+    public MySimulationService(IHook<OnSimulationUpdate> onSimulationUpdate)
+    {
+        // subscription returns a handle that can be used to unsubscribe
+        // the second argument is a priority
+        // `Priorities` provides some constants, but any sbyte is accepted
+        _simulationUpdateSubscription = onSimulationUpdate.Subscribe(HandleSimulationUpdate, Priorities.Normal);
+    }
+
+    public Task HandleSimulationUpdate(OnSimulationUpdate payload, HookContext ctx)
+    {
+        // ...
+    }
+
+    public void Dispose()
+    {
+        // ...
+
+        // unsubscribe from the hook when you're done
+        _simulationUpdateSubscription.Dispose();
+    }
+
+}
+```
+
+Alternatively, if your service's subscription will last for the same lifetime as itself, you can also attach the hook during registration:
+
+```csharp
+builder.RegisterType<MySimulationService>()
+    .InstancePerPhase<SimulationPhase>()
+    .OnHook(e => e.Instance.HandleSimulationUpdate, Priorities.Normal); // "e" here is an Autofac `IActivatedEventArgs<T>`
+// disposal is handled automatically by the relevant scope's lifetime
+```
+
+Of course, the same interface-style injection is available for services registered _above_ the hook in the hierarchy, for example, to hook into discovery phase init from your main app:
+
+```csharp
+public class MyGameApp : SimLynxApp, IHookHandler<OnPhaseInit<DiscoveryPhase>>
+{
+    public Task HandleHook(OnPhaseInit<DiscoveryPhase> payload, HookContext context)
+    {
+        // ...
+        // disposal is handled automatically here since this service outlives the hook
+    }
+
+    // you can *optionally* override the priority this way, too
+    sbyte IHookHandler<OnPhaseInit<DiscoveryPhase>>.Priority => Priorities.High;
+}
+```
+
+#### Creating Hooks
+
+To create a hook to invoke yourself, first, create a "payload" type that your hook will carry (and be identified by). For consistencies sake, SimLynx prefers to use the convention of starting all hook payload types with `On`, such as `OnSimulationUpdate` or `OnPhaseInit<T>`.
+
+```csharp
+public record OnMyHook(bool IsAwesome);
+// record's aren't required, but they *are* less code to write and can save time
+```
+
+Hooks are defined by their payload type, which may be any valid C# "object type" (classes, records, structs, interfaces, etc.). In the case of generic types, different generic parameters create different types and therefore _different_ hooks!
+
+Then, register one to the container _to the relevant scope_ using the available extension to create the default type of hook:
+
+```csharp
+builder.RegisterHook<OnMyHook>()
+    .InstancePerPhase<SimulationPhase>();
+```
+
+From your dispatching service, inject the hook then invoke it:
+
+```csharp
+public class MySimulationService(IHook<OnMyHook> onMyHook)
+{
+
+    public async Task DoThingAsync(CancellationToken token)
+    {
+        // async delegation and priority control is all handled for you
+        // reduced to one single task that is the entire invocation
+        await onMyHook.Invoke(new OnMyHook(true), token);
+    }
+
+}
+
+```
+
+By default, hooks will execute the subscribers serially first ordered by priority (higher numbers win), then subscription order. However, there are other strategies, which can be selected per-hook. For most hooks, this can be done by overriding the provided `IHookDeliveryStrategy` during registration:
+
+```csharp
+builder.RegisterHook<OnMyHook>()
+    .InstancePerPhase<SimulationPhase>()
+    .WithDeliveryStrategy(ConcurrentHookDeliveryStrategy.Default);
+    // use the "concurrent" (i.e. Task.WhenAll) strategy instead
+```
+
+Note: due to limitations with C# generics and extension methods, these methods will broaden the registration limit type for this builder to `IHook<T>`, so they should be placed near the end of their builder chain.
+
+---
+
+**!TODO** More info soon

@@ -18,12 +18,16 @@ public class ConcurrentHookDeliveryStrategy : IHookDeliveryStrategy
     public static ConcurrentHookDeliveryStrategy Default { get; } = new();
 
     /// <inheritdoc/>
-    public Task Deliver<TPayload>(
+    public async Task Deliver<TPayload>(
         TPayload payload,
         HookContext context,
-        IReadOnlyCollection<HookHandler<TPayload>> handlers
+        IReadOnlyDictionary<sbyte, IReadOnlyCollection<IHookHandler<TPayload>>> handlers
     )
     {
-        return Task.WhenAll(handlers.Select(handler => handler.Invoke(payload, context)));
+        foreach (var handlerGroup in handlers)
+        {
+            await Task.WhenAll(handlerGroup.Value.Select(handler => handler.HandleHook(payload, context)))
+                .ConfigureAwait(false);
+        }
     }
 }

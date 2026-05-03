@@ -1,7 +1,9 @@
+using System;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
+using Autofac.Core;
 using SimLynx.Core.Hooks;
 
 namespace SimLynx.Core.Phasing;
@@ -11,6 +13,17 @@ namespace SimLynx.Core.Phasing;
 /// </summary>
 public abstract class Phase : IPhase
 {
+    /// <summary>
+    /// Gets the tag for lifetime scopes associated with the given <paramref name="phaseType"/>.
+    /// </summary>
+    /// <param name="phaseType">The type of the phase.</param>
+    /// <returns>The tag for the lifetime scope associated with the phase type.</returns>
+    public static object GetLifetimeScopeTag(Type phaseType)
+    {
+        ArgumentNullException.ThrowIfNull(phaseType);
+        return new TypedService(phaseType);
+    }
+
     private static readonly MethodInfo InvokeRunHookMethod = typeof(Phase).GetMethod(
         nameof(InvokeRunHook),
         BindingFlags.Instance | BindingFlags.NonPublic
@@ -40,7 +53,7 @@ public abstract class Phase : IPhase
     /// <returns>A task that represents the operation.</returns>
     protected virtual Task RunPhase(CancellationToken cancellationToken)
     {
-        return (Task)InvokeRunHookMethod.MakeGenericMethod(GetType()).Invoke(this, []);
+        return (Task)InvokeRunHookMethod.MakeGenericMethod(GetType()).Invoke(this, [])!;
     }
 
     private Task InvokeRunHook<TPhase>()

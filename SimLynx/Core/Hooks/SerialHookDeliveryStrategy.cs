@@ -18,12 +18,15 @@ public class SerialHookDeliveryStrategy : IHookDeliveryStrategy
     public async Task Deliver<TPayload>(
         TPayload payload,
         HookContext context,
-        IReadOnlyCollection<HookHandler<TPayload>> handlers
+        IReadOnlyDictionary<sbyte, IReadOnlyCollection<IHookHandler<TPayload>>> handlers
     )
     {
-        foreach (var handler in handlers)
+        foreach (var handlerGroup in handlers)
         {
-            await handler(payload, context).ConfigureAwait(false);
+            foreach (var handler in handlerGroup.Value)
+            {
+                await handler.HandleHook(payload, context).ConfigureAwait(false);
+            }
         }
     }
 }

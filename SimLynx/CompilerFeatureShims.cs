@@ -42,6 +42,20 @@ namespace System.Diagnostics.CodeAnalysis
     [AttributeUsage(AttributeTargets.Constructor, Inherited = false)]
     [EditorBrowsable(EditorBrowsableState.Never)]
     internal sealed class SetsRequiredMembersAttribute : Attribute;
+
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property, Inherited = false, AllowMultiple = true)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    internal sealed class MemberNotNullWhenAttribute : Attribute
+    {
+        public MemberNotNullWhenAttribute(bool returnValue, params string[] members)
+        {
+            ReturnValue = returnValue;
+            Members = members;
+        }
+
+        public bool ReturnValue { get; }
+        public string[] Members { get; }
+    }
 }
 
 #endif

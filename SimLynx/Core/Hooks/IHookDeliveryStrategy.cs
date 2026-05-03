@@ -15,11 +15,11 @@ public interface IHookDeliveryStrategy
     /// <typeparam name="TPayload">The type of payload the hook carries.</typeparam>
     /// <param name="payload">The payload to deliver to the handlers.</param>
     /// <param name="context">The context of the hook invocation.</param>
-    /// <param name="handlers">The handlers to which the payload should be delivered.</param>
+    /// <param name="handlers">The handlers to which the payload should be delivered, keyed and sorted by priority.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     public Task Deliver<TPayload>(
         TPayload payload,
         HookContext context,
-        IReadOnlyCollection<HookHandler<TPayload>> handlers
+        IReadOnlyDictionary<sbyte, IReadOnlyCollection<IHookHandler<TPayload>>> handlers
     );
 }

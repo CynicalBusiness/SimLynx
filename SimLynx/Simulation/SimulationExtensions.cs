@@ -1,4 +1,6 @@
 using Autofac.Builder;
+using SimLynx.Core.Phasing;
+using SimLynx.Simulation.Stages;
 
 namespace SimLynx.Simulation;
 
@@ -18,7 +20,16 @@ public static class SimulationExtensions
         /// <returns>The builder for further configuration.</returns>
         public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> SimulationInstance()
         {
-            return builder.InstancePerOwned<SimulationPhase>();
+            return builder.InstancePerPhase(typeof(SimulationPhase));
+        }
+
+        /// <summary>
+        /// Configures the component to be instanced once per simulation <see cref="IStage"/>.
+        /// </summary>
+        /// <returns>The builder for further configuration.</returns>
+        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> InstancePerStage()
+        {
+            return builder.InstancePerOwned<IStage>();
         }
     }
 }

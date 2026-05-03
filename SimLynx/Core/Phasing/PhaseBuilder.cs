@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
@@ -21,6 +22,11 @@ public class PhaseBuilder<TPhase>(
 ) : IPhaseBuilder<TPhase>
     where TPhase : IPhase
 {
+    /// <summary>
+    /// Tag for the lifetime scope associated with this phase builder's phase type.
+    /// </summary>
+    public static readonly object LifetimeScopeTag = Phase.GetLifetimeScopeTag(typeof(TPhase));
+
     /// <summary>
     /// Log event for when a phase manager is initializing its phase.
     /// </summary>
@@ -63,7 +69,7 @@ public class PhaseBuilder<TPhase>(
     {
         await TryInit(cancellationToken);
 
-        var phaseScope = currentScope.BeginLifetimeScope(new TypedService(typeof(TPhase)), ConfigureContainer);
+        var phaseScope = currentScope.BeginLifetimeScope(LifetimeScopeTag, ConfigureContainer);
         var phase = phaseScope.Resolve<TPhase>();
         return phase;
     }

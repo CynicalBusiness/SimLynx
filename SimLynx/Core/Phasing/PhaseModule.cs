@@ -1,4 +1,5 @@
 using Autofac;
+using Autofac.Core;
 using SimLynx.Core.Hooks;
 
 namespace SimLynx.Core.Phasing;
@@ -19,18 +20,18 @@ public class PhaseModule<TPhase>(string phaseId) : Module
         builder
             .RegisterHook<OnPhaseConfigure<TPhase>>()
             .IfNotRegistered(typeof(Hook<OnPhaseConfigure<TPhase>>))
-            .WithPipe(payload => (OnPhaseConfigure)payload)
-            .WithDeliveryStrategy(SerialHookDeliveryStrategy.Default); // the ConfigurationBuilder is not thread-safe, so we must run serially
+            .WithDeliveryStrategy(SerialHookDeliveryStrategy.Default) // the ConfigurationBuilder is not thread-safe, so we must run serially
+            .WithPipe(payload => (OnPhaseConfigure)payload);
         builder
             .RegisterHook<OnPhaseInit<TPhase>>()
             .IfNotRegistered(typeof(Hook<OnPhaseInit<TPhase>>))
-            .WithPipe(payload => (OnPhaseInit)payload)
-            .WithDeliveryStrategy(ConcurrentHookDeliveryStrategy.Default);
+            .WithDeliveryStrategy(ConcurrentHookDeliveryStrategy.Default)
+            .WithPipe(payload => (OnPhaseInit)payload);
         builder
             .RegisterHook<OnPhaseRun<TPhase>>()
             .IfNotRegistered(typeof(Hook<OnPhaseRun<TPhase>>))
-            .WithPipe(payload => (OnPhaseRun)payload)
-            .WithDeliveryStrategy(ConcurrentHookDeliveryStrategy.Default);
+            .WithDeliveryStrategy(ConcurrentHookDeliveryStrategy.Default)
+            .WithPipe(payload => (OnPhaseRun)payload);
 
         builder
             .RegisterType<TPhase>()

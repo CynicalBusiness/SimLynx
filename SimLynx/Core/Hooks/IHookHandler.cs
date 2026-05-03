@@ -11,7 +11,13 @@ namespace SimLynx.Core.Hooks;
 /// <br/>
 /// Used mostly for reflection and discovery.
 /// </remarks>
-public interface IHookHandler { }
+public interface IHookHandler
+{
+    /// <summary>
+    /// The source object for this handler.
+    /// </summary>
+    public object? Source => this;
+}
 
 /// <summary>
 /// Interface for classes which can handle <typeparamref name="TPayload"/> hooks.

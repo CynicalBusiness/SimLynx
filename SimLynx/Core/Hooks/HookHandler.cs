@@ -3,10 +3,24 @@ using System.Threading.Tasks;
 namespace SimLynx.Core.Hooks;
 
 /// <summary>
-/// Handler delegate for <typeparamref name="TPayload"/> hooks which subscribers should implement.
+/// A simple implementation of <see cref="IHookHandler{TPayload}"/> which wraps a
+/// <see cref="HookHandlerFunc{TPayload}"/> delegate.
 /// </summary>
-/// <typeparam name="TPayload">The type of payload.</typeparam>
-/// <param name="payload">The payload to be processed by the hook.</param>
-/// <param name="context">The context in which the hook is being executed.</param>
-/// <returns>A task representing the operation.</returns>
-public delegate Task HookHandler<TPayload>(TPayload payload, HookContext context);
+/// <typeparam name="TPayload">The type of the payload.</typeparam>
+/// <param name="HandlerFunc">The handler function.</param>
+/// <param name="Source">The source of the hook.</param>
+/// <param name="Priority">The priority of the hook.</param>
+public record class HookHandler<TPayload>(
+    HookHandlerFunc<TPayload> HandlerFunc,
+    object? Source = null,
+    sbyte Priority = Priorities.Default
+) : IHookHandler<TPayload>
+{
+    /// <inheritdoc/>
+    public Task HandleHook(TPayload payload, HookContext context)
+    {
+        return HandlerFunc.Invoke(payload, context);
+    }
+
+    object? IHookHandler.Source => Source;
+}
