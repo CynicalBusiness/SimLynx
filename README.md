@@ -56,7 +56,7 @@ In general, no restrictions are imposed on your app/game's licensing by using Si
 
 See the [license](./LICENSE) for more details.
 
-## Getting Started
+## Quick Start
 
 ### For Game/App Developers
 
@@ -91,34 +91,72 @@ More detailed information and references on the ~~wiki~~ (coming soon).
 
 SimLynx utilizes [Autofac](https://autofac.org/) as an IoC container, which allows for a highly versatile architecture, especially when UGC is involved.
 
-If you are unfamiliar with Autofac, Dependency Injection in general, or are already using another DI container, SimLynx can run self-contained and manages its own container. **This is the recommended use for most people,** as well as a brief read up on [Autofac's general concepts](https://autofac.readthedocs.io/en/latest/getting-started/index.html).
+If you are unfamiliar with Autofac, Dependency Injection in general, or are already using another DI container, SimLynx can run self-contained and manages its own container. **This is the recommended use** unless you have reason otherwise. You should also brief on [Autofac's general concepts](https://autofac.readthedocs.io/en/latest/getting-started/index.html), as SimLynx relies on many of its features.
 
-#### Usage with external DI containers
+#### Usage with external Autofac containers
 
-If your application already uses Autofac, SimLynx can be used as a module in your existing container; this may be preferred instead. SimLynx offers a registration extension for this:
+If your application already uses Autofac, it may be preferred, instead, to use SimLynx as a module. SimLynx offers a registration extension for this:
 
 ```csharp
-containerBuilder.RegisterSimLynx<MyGameApp>();
-
-// or, the module directly, if you prefer
-// this is essentially what the extension is doing
 containerBuilder.RegisterModule<SimLynxModule<MyGameApp>>();
 ```
 
-For other containers, you can use the relevant container bridge or simply run SimLynx in self-contained mode wrapped in the method of your choosing.
+### The Component Model
 
-```csharp
+At the core of SimLynx's simulation is what is referred to the "Component Model", a general term for the main simulation units, Components, the supporting/extending objects, and how they all interact with one-another.
 
-vat cts = new CancellationTokenSource();
-var handle = SimLynx.Run<MyGameApp>(cts.token);
+Not to be confused with `System.ComponentModel` or the likes of Unity's Component Model, SimLynx's component model is define by four main parts:
 
-// handle can be used to manage your running app
-// TODO examples
+- **Components** are the core of the model, actually doing the simulating as well as providing an API surface for other objects, such as other components, to access its relevant part of the simulation.
+    - Components, unlike in ECS or other component models, are not instantiated per-object, but per _prototype_, or _type of_ object.
+- **Entities** are special-case components that are also containers for other components
+    - Because entities are just a type of component, they can also be a component of another entity, creating a "sub-entity", which can also have its own unique set of components like any other entity, including even more entities.
+    - Component trees always start with one root entity, as components cannot stand alone
+- **Instances** actually hold the state data of the simulation, and are usually nothing more than containers.
+    - Instances are simulated by their respective component and only by that component. Said component is responsible for being the API for its instances to allow for other objects to interact with its state, if at all.
+- **Systems** operate broadly on many entities/components at once, allowing for behavior which affects many objects in a batch or across multiple different types of objects.
+    - Unlike ECS, where systems do all of the work, SimLynx systems are much more uncommon and are mostly used for broad-scope jobs like path-finding, power grids, global inventories, etc.
+    - Systems cannot interact with instances directly, only through their respective components.
 
-// then cancel the token to stop
-ctx.Cancel();
+While SimLynx broadly shares a lot of concepts with an ECS architecture, and is indeed data-oriented, it is important to understand that the terminology is used differently.
 
-```
+#### Supporting Objects
+
+In addition to the "big four" concepts, there are some additional supporting objects within the Component Model that are useful to understand:
+
+- **Stages** (as in, theater stages) separate the simulation into distinct subdivisions, similar to "scenes" in other game engines.
+    - Simulation stages always run in parallel to each-other, since no interaction between them (except for instances being moved) is intended. Systems and components, for example, are always instanced per-stage.
+- **Signals** allow components to communicate with one-another in an reactive, event-like way.
+- **Instance Tables** are the object that actually stores instance data, though isn't intended to be a method to access it, which is what components are for.
+- **Component Prototypes**, and by extension Entity Prototypes, are the "static" side of components: created at design-time, they provide configuration for components created from them.
+    - As mentioned earlier, components are actually instantiated per prototype (and per stage).
+    - Entity prototypes, like entities are to components, are actually a type of component prototype, but also serve as a container for other component prototypes.
+    - See [Prototypes](#prototypes) for more information on how they work.
+
+#### Parallelization
+
+SimLynx's Component Model, and by extension its simulation, is highly parallel and will attempt to take maximum advantage of available CPU cores to boost performance even without dedicated optimization.
+
+Multi-threading, though, can be a difficult concept for many developers, both new and experienced alike, due to unexpected interactions and race conditions with concurrent access that would not be present in "standard" serial code. These issues are often intermittent, practically non-deterministic and seemingly random, making them very difficult to debug.
+
+SimLynx, when used as directed, handles much of this complication, but this can come with some caveats that must be considered:
+
+- Components and systems are often interacted with concurrently from many threads. While these interactions are designed to be safe as far as instances are concerned, any additional members these objects may store, such as dictionaries, **must be thread-safe** or otherwise carefully managed.
+- Locks and other similar blocking operations can be hugely detrimental to the simulation's performance, especially on CPUs with fewer available threads, as this can "lock out" work threads that could otherwise be helping with simulating.
+
+Consider reading up on the `lock` keyword, concurrent or immutable collections (e.g. `ConcurrentDictionary` and `ImmutableDictionary`), the `Interlocked` class, or lock/semaphore classes like `ReaderWriterLockSlim`.
+
+If concurrency management becomes difficult for something like members of components or shared utilities, it may be best to store that information on instances and/or use a system instead and let SimLynx handle it. When all else fails, components can be marked as non-thread-safe and SimLynx will handle them separately and serially, but this can come at a substantial performance loss.
+
+### Prototypes
+
+Prototypes are one of the core ingredients in SimLynx and a primary component behind the built-in UGC support.
+
+In essence, prototypes define configuration for various components which can be defined and configured at design-time by loaded content, either programmatically or through configuration files (i.e. YAML/JSON). These configurations remain mutable through the design phase, allowing for content to both introduce new prototypes as well as augment those of other content. Once these prototypes are assembled, they can be used as-is or act as a blueprint for making simulation-time objects.
+
+Most of SimLynx's core components are derived from prototypes, meaning most can be configured by content out-of-the-box. It is recommended, then, that your app's core components also be built using prototypes to benefit from these features.
+
+**!TODO** More detailed explanation once things are more fleshed out.
 
 ### Phases of Operation
 
@@ -137,16 +175,6 @@ The phases can also be treated as "checkpoints" that can be jumped to to "reload
 #### Advanced: Custom Phases
 
 SimLynx allows for custom phases to by defined by your application. While the use-cases of this are few and far between, if it does come up, you _can_ adjust phases to suit your needs, including introducing your own new phases. For more information, see ~~here~~. **!TODO**
-
-### Prototypes
-
-Prototypes are one of the core ingredients in SimLynx and a primary component behind the built-in UGC support.
-
-In essence, prototypes define configuration for various components which can be defined and configured at design-time by loaded content, either programmatically or through configuration files (i.e. YAML/JSON). These configurations remain mutable through the design phase, allowing for content to both introduce new prototypes as well as augment those of other content. Once these prototypes are assembled, they can be used as-is or act as a blueprint for making simulation-time objects.
-
-Most of SimLynx's core components are derived from prototypes, meaning most can be configured by content out-of-the-box. It is recommended, then, that your app's core components also be built using prototypes to benefit from these features.
-
-**!TODO** More detailed explanation once things are more fleshed out.
 
 ### Hooks
 
@@ -199,11 +227,11 @@ Alternatively, if your service's subscription will last for the same lifetime as
 ```csharp
 builder.RegisterType<MySimulationService>()
     .InstancePerPhase<SimulationPhase>()
-    .OnHook(e => e.Instance.HandleSimulationUpdate, Priorities.Normal); // "e" here is an Autofac `IActivatedEventArgs<T>`
+    .OnHook(e => new HookHandler<OnSimulationUpdate>(e.Instance.HandleSimulationUpdate, e.Instance)); // "e" here is an Autofac `IActivatedEventArgs<T>`
 // disposal is handled automatically by the relevant scope's lifetime
 ```
 
-Of course, the same interface-style injection is available for services registered _above_ the hook in the hierarchy, for example, to hook into discovery phase init from your main app:
+Of course, the interface-style injection is available for services registered _above_ the hook in the hierarchy, for example, to hook into discovery phase init from your main app:
 
 ```csharp
 public class MyGameApp : SimLynxApp, IHookHandler<OnPhaseInit<DiscoveryPhase>>
@@ -214,10 +242,12 @@ public class MyGameApp : SimLynxApp, IHookHandler<OnPhaseInit<DiscoveryPhase>>
         // disposal is handled automatically here since this service outlives the hook
     }
 
-    // you can *optionally* override the priority this way, too
+    // you can optionally override the priority this way, too
     sbyte IHookHandler<OnPhaseInit<DiscoveryPhase>>.Priority => Priorities.High;
 }
 ```
+
+Hooks registered to the container will automatically subscribe these any service registered with `IHookHandler<T>` (of the relevant hook type) when they are resolved.
 
 #### Creating Hooks
 
@@ -254,7 +284,7 @@ public class MySimulationService(IHook<OnMyHook> onMyHook)
 
 ```
 
-By default, hooks will execute the subscribers serially first ordered by priority (higher numbers win), then subscription order. However, there are other strategies, which can be selected per-hook. For most hooks, this can be done by overriding the provided `IHookDeliveryStrategy` during registration:
+By default, hooks will execute the subscribers serially first ordered by priority (higher numbers win), then subscription order. However, there are other strategies, which can be selected per-scope, or per-hook. For most hooks, this can be done by overriding the provided `IHookDeliveryStrategy` during registration:
 
 ```csharp
 builder.RegisterHook<OnMyHook>()
@@ -264,6 +294,8 @@ builder.RegisterHook<OnMyHook>()
 ```
 
 Note: due to limitations with C# generics and extension methods, these methods will broaden the registration limit type for this builder to `IHook<T>`, so they should be placed near the end of their builder chain.
+
+You can, too, create a hook manually, if you want its lifecycle to be more tightly controlled. You can either register the hook with `InstancePerDependency` and inject a `Func<IHook<OnMyHook>>`, or simply instantiate the hook with `new Hook<OnMyHook>(deliveryStrategy)`.
 
 ---
 

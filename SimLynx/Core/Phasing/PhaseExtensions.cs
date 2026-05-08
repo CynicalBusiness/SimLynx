@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Builder;
+using Autofac.Core;
 using Autofac.Core.Registration;
 
 namespace SimLynx.Core.Phasing;
@@ -38,10 +39,20 @@ public static class PhaseExtensions
         /// appropriate tag for the phase.
         /// </remarks>
         /// <param name="phaseType">The phase type whose lifetime scope should own the instance.</param>
-        /// <returns></returns>
+        /// <returns>The registration builder for chaining.</returns>
         public IRegistrationBuilder<TLimit, TData, TStyle> InstancePerPhase(Type phaseType)
         {
-            return @this.InstancePerMatchingLifetimeScope(Phase.GetLifetimeScopeTag(phaseType));
+            return @this.InstancePerOwned(phaseType);
+        }
+
+        /// <summary>
+        /// Configures a service to be registered such that it will have one instance per phase with the given ID.
+        /// </summary>
+        /// <param name="phaseId">The ID of the phase whose lifetime scope should own the instance.</param>
+        /// <returns>The registration builder for chaining.</returns>
+        public IRegistrationBuilder<TLimit, TData, TStyle> InstancePerPhase(string phaseId)
+        {
+            return @this.InstancePerMatchingLifetimeScope(Phase.PHASE_SCOPE_TAG_PREFIX + phaseId);
         }
     }
 

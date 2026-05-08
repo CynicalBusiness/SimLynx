@@ -14,14 +14,20 @@ namespace SimLynx.Core.Phasing;
 public abstract class Phase : IPhase
 {
     /// <summary>
+    /// Prefix for lifetime scope tags associated with phases by phase ID.
+    /// </summary>
+    public const string PHASE_SCOPE_TAG_PREFIX = "Phase:";
+
+    /// <summary>
     /// Gets the tag for lifetime scopes associated with the given <paramref name="phaseType"/>.
     /// </summary>
     /// <param name="phaseType">The type of the phase.</param>
+    /// <param name="phaseId">The ID of the phase.</param>
     /// <returns>The tag for the lifetime scope associated with the phase type.</returns>
-    public static object GetLifetimeScopeTag(Type phaseType)
+    public static ScopeTags GetLifetimeScopeTag(Type phaseType, string phaseId)
     {
         ArgumentNullException.ThrowIfNull(phaseType);
-        return new TypedService(phaseType);
+        return new ScopeTags(new TypedService(phaseType), PHASE_SCOPE_TAG_PREFIX + phaseId);
     }
 
     private static readonly MethodInfo InvokeRunHookMethod = typeof(Phase).GetMethod(

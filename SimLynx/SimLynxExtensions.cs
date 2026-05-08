@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using Autofac.Builder;
+using SimLynx.Core;
 
 namespace SimLynx;
 
@@ -108,6 +109,14 @@ public static class SimLynxExtensions
             return targetType.IsAssignableFrom(@this);
         }
 #endif
+    }
+
+    extension(IMetaType @this)
+    {
+        /// <summary>
+        /// Indicates whether the type represented by this meta-type is abstract.
+        /// </summary>
+        public bool IsAbstract => @this.Type.IsAbstract;
     }
 
     extension(MemberInfo member)

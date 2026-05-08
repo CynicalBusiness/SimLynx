@@ -15,6 +15,11 @@ public class SimulationPhase : Phase, IDisposable
     public const string METRONOME_NAME = "Simulation";
 
     /// <summary>
+    /// Name of the main stage.
+    /// </summary>
+    public const string MAIN_STAGE_NAME = "Main";
+
+    /// <summary>
     /// The default target rate at which the simulation will update.
     /// </summary>
     /// <remarks>

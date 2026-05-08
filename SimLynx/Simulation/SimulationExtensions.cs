@@ -1,6 +1,6 @@
+using Autofac;
 using Autofac.Builder;
 using SimLynx.Core.Phasing;
-using SimLynx.Simulation.Stages;
 
 namespace SimLynx.Simulation;
 
@@ -9,6 +9,24 @@ namespace SimLynx.Simulation;
 /// </summary>
 public static class SimulationExtensions
 {
+    extension(ContainerBuilder @this)
+    {
+        /// <summary>
+        /// Registers a stage to be created as part of the simulation.
+        /// </summary>
+        /// <typeparam name="TStage">The type of the stage to register.</typeparam>
+        /// <returns>The registration builder for further configuration.</returns>
+        public IRegistrationBuilder<
+            TStage,
+            ConcreteReflectionActivatorData,
+            SingleRegistrationStyle
+        > RegisterStage<TStage>(string stageName)
+            where TStage : IStage
+        {
+            return @this.RegisterType<TStage>().Named<IStage>(stageName).InstancePerStage();
+        }
+    }
+
     extension<TLimit, TActivatorData, TRegistrationStyle>(
         IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> builder
     )
@@ -18,7 +36,7 @@ public static class SimulationExtensions
         /// simulation phase.
         /// </summary>
         /// <returns>The builder for further configuration.</returns>
-        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> SimulationInstance()
+        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> InstancePerSimulation()
         {
             return builder.InstancePerPhase(typeof(SimulationPhase));
         }
