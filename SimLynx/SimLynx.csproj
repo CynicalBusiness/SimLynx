@@ -1,15 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
-        <PreReleaseLabel>alpha</PreReleaseLabel>
-        <LangVersion>latest</LangVersion>
+        <RootNamespace>SimLynx</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Autofac" Version="9.1.0" />
-        <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
-        <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.5" />
-        <PackageReference Include="Semver" Version="3.0.0" />
+        <PackageReference Include="Autofac"
+                          Version="9.1.0" />
+        <PackageReference Include="Autofac.Extensions.DependencyInjection"
+                          Version="10.0.0" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection"
+                          Version="10.0.5" />
+        <PackageReference Include="Microsoft.Extensions.Logging"
+                          Version="10.0.5" />
+        <PackageReference Include="Semver"
+                          Version="3.0.0" />
     </ItemGroup>
 </Project>

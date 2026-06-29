@@ -23,11 +23,6 @@ public class PhaseBuilder<TPhase>(
     where TPhase : IPhase
 {
     /// <summary>
-    /// Tag for the lifetime scope associated with this phase builder's phase type.
-    /// </summary>
-    public static readonly object LifetimeScopeTag = Phase.GetLifetimeScopeTag(typeof(TPhase));
-
-    /// <summary>
     /// Log event for when a phase manager is initializing its phase.
     /// </summary>
     public static readonly LogEvent<string> InitLogEvent = new(
@@ -69,7 +64,10 @@ public class PhaseBuilder<TPhase>(
     {
         await TryInit(cancellationToken);
 
-        var phaseScope = currentScope.BeginLifetimeScope(LifetimeScopeTag, ConfigureContainer);
+        var phaseScope = currentScope.BeginLifetimeScope(
+            Phase.GetLifetimeScopeTag(typeof(TPhase), PhaseId),
+            ConfigureContainer
+        );
         var phase = phaseScope.Resolve<TPhase>();
         return phase;
     }

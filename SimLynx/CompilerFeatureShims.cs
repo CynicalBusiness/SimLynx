@@ -2,27 +2,28 @@
  * Auto-generated set of shims for compiler features not present in .NET Standard 2.1.
  */
 
-#if NETSTANDARD
+#if NETSTANDARD && !NO_COMPILER_FEATURE_SHIMS
 #pragma warning disable IDE0130
 #pragma warning disable IDE0290
+#pragma warning disable CS1591
 
 using System.ComponentModel;
 
 namespace System.Runtime.CompilerServices
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
-    internal static class IsExternalInit;
+    public static class IsExternalInit;
 
     [AttributeUsage(
         AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Field | AttributeTargets.Property,
         Inherited = false
     )]
     [EditorBrowsable(EditorBrowsableState.Never)]
-    internal sealed class RequiredMemberAttribute : Attribute;
+    public sealed class RequiredMemberAttribute : Attribute;
 
     [AttributeUsage(AttributeTargets.All, Inherited = false, AllowMultiple = true)]
     [EditorBrowsable(EditorBrowsableState.Never)]
-    internal sealed class CompilerFeatureRequiredAttribute : Attribute
+    public sealed class CompilerFeatureRequiredAttribute : Attribute
     {
         public CompilerFeatureRequiredAttribute(string featureName)
         {
@@ -40,12 +41,10 @@ namespace System.Runtime.CompilerServices
 namespace System.Diagnostics.CodeAnalysis
 {
     [AttributeUsage(AttributeTargets.Constructor, Inherited = false)]
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    internal sealed class SetsRequiredMembersAttribute : Attribute;
+    public sealed class SetsRequiredMembersAttribute : Attribute;
 
     [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property, Inherited = false, AllowMultiple = true)]
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    internal sealed class MemberNotNullWhenAttribute : Attribute
+    public sealed class MemberNotNullWhenAttribute : Attribute
     {
         public MemberNotNullWhenAttribute(bool returnValue, params string[] members)
         {

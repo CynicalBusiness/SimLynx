@@ -2,7 +2,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
+using Autofac.Core;
 using Autofac.Core.Registration;
+using Autofac.Util;
 
 namespace SimLynx;
 
@@ -22,35 +24,54 @@ public static class SimLynx
     {
         return builder.RegisterModule<SimLynxModule<TApp>>().IfNotRegistered(typeof(SimLynxApp));
     }
+}
 
+/// <summary>
+/// Represents a self-contained SimLynx instance.
+/// </summary>
+/// <typeparam name="TApp">The type of the SimLynx app.</typeparam>
+public class SimLynx<TApp> : Disposable
+    where TApp : SimLynxApp
+{
     /// <summary>
-    /// Runs a new self-contained SimLynx app instance.
+    /// Creates a new SimLynx instance with the given app type, allowing for optional container configuration
+    /// before the container is built.
     /// </summary>
-    /// <typeparam name="TApp">The type of the SimLynx app.</typeparam>
-    /// <param name="app">The created app instance.</param>
     /// <param name="configureContainer">An optional action to configure the container before it is built.</param>
-    /// <param name="cancellationToken">A cancellation token that can be used to stop the app.</param>
-    /// <returns>A task that represents the lifetime of the app.</returns>
-    public static Task Run<TApp>(
-        out TApp app,
-        Action<ContainerBuilder>? configureContainer = null,
-        CancellationToken cancellationToken = default
-    )
-        where TApp : SimLynxApp
+    public SimLynx(Action<ContainerBuilder>? configureContainer = null)
     {
         var builder = new ContainerBuilder();
         builder.RegisterSimLynx<TApp>();
         configureContainer?.Invoke(builder);
-        using var container = builder.Build();
 
-        app = container.Resolve<TApp>();
-        return app.RunAsync(cancellationToken);
+        Container = builder.Build();
+        App = Container.Resolve<TApp>();
     }
 
-    /// <inheritdoc cref="Run{TApp}(out TApp, Action{ContainerBuilder}?, CancellationToken)"/>
-    public static Task Run<TApp>(out TApp app, CancellationToken cancellationToken = default)
-        where TApp : SimLynxApp
+    /// <summary>
+    /// Creates a new SimLynx instance with the given app type, using default configuration.
+    /// </summary>
+    public SimLynx()
+        : this(null) { }
+
+    /// <summary>
+    /// The DI container for this SimLynx instance.
+    /// </summary>
+    public IContainer Container { get; private set; }
+
+    /// <summary>
+    /// The SimLynx app for this SimLynx instance.
+    /// </summary>
+    public TApp App { get; }
+
+    /// <inheritdoc/>
+    protected override async ValueTask DisposeAsync(bool disposing)
     {
-        return Run(out app, null, cancellationToken);
+        await base.DisposeAsync(disposing);
+
+        if (disposing)
+        {
+            await Container.DisposeAsync();
+        }
     }
 }

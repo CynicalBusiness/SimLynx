@@ -49,20 +49,3 @@ public class PhaseModule<TPhase>(string phaseId) : Module
             .InstancePerDependency();
     }
 }
-
-/// <summary>
-/// Module to register general phase-related infrastructure in the DI container.
-/// </summary>
-internal class PhaseModule() : Module
-{
-    protected override void Load(ContainerBuilder builder)
-    {
-        base.Load(builder);
-
-        builder.RegisterHook<OnPhaseConfigure>().WithDeliveryStrategy(SerialHookDeliveryStrategy.Default);
-        builder.RegisterHook<OnPhaseInit>().WithDeliveryStrategy(ConcurrentHookDeliveryStrategy.Default);
-        builder.RegisterHook<OnPhaseRun>().WithDeliveryStrategy(ConcurrentHookDeliveryStrategy.Default);
-
-        builder.RegisterType<PhaseManager>().As<IPhaseManager>().InstancePerLifetimeScope();
-    }
-}

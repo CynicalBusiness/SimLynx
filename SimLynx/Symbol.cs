@@ -35,9 +35,12 @@ public readonly struct Symbol : IEquatable<Symbol>
     public const string SYMBOL_PREFIX = "#";
 
     /// <summary>
-    /// The default symbol instance (an unnamed unique symbol).
+    /// The empty symbol instance (an unnamed unique symbol).
     /// </summary>
-    public static readonly Symbol Default = default;
+    /// <remarks>
+    /// This property is equivalent to <c>default(Symbol)</c>, and is provided for convenience and readability.
+    /// </remarks>
+    public static readonly Symbol Empty = default;
 
     /// <summary>
     /// Equality operator for symbols.
@@ -75,7 +78,7 @@ public readonly struct Symbol : IEquatable<Symbol>
     /// <param name="symbol">The symbol.</param>
     public static implicit operator EventId(Symbol symbol) => new(symbol.Value, symbol.Name);
 
-    private static readonly ConcurrentDictionary<int, string> nameLookup = [];
+    private static readonly ConcurrentDictionary<int, string> nameLookup = new() { [Empty.Value] = string.Empty };
 
     private static int _uniqueValueIdx = -1;
 

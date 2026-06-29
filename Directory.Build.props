@@ -3,6 +3,10 @@
         <Nullable>enable</Nullable>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
+        <TargetFrameworks>netstandard2.1;net8.0</TargetFrameworks>
+        <PreReleaseLabel>alpha</PreReleaseLabel>
+        <LangVersion>latest</LangVersion>
+
         <PackageLicenseFile>LICENSE</PackageLicenseFile>
     </PropertyGroup>
 

@@ -4,6 +4,7 @@ using SimLynx.Core;
 using SimLynx.Core.Hooks;
 using SimLynx.Core.Logging;
 using SimLynx.Core.Phasing;
+using SimLynx.Core.Prototyping;
 using SimLynx.Design;
 using SimLynx.Discovery;
 using SimLynx.Simulation;
@@ -27,9 +28,10 @@ public class SimLynxModule<TApp> : Module
         // core modules
         builder.RegisterModule<LoggingModule>().IfNotRegistered(typeof(ILogger));
         builder.RegisterModule<HooksModule>();
+        builder.RegisterModule<PhasingModule>();
+        builder.RegisterModule<PrototypingModule>();
 
         // phase modules
-        builder.RegisterModule<PhaseModule>();
         builder.RegisterModule<DiscoveryModule>();
         builder.RegisterModule<DesignModule>();
         builder.RegisterModule<SimulationModule>();

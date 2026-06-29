@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
+using Autofac;
 using Autofac.Builder;
 using SimLynx.Core;
 
@@ -141,14 +142,57 @@ public static class SimLynxExtensions
     )
     {
         /// <summary>
-        /// Configures the registration to be identified by the specified symbol, allowing it to be resolved by that
-        /// symbol as a key.
+        /// Configures the registration to be identified by the specified symbol, allowing
+        /// <typeparamref name="TService"/> to be resolved by that symbol as a key.
         /// </summary>
+        /// <typeparam name="TService">The type of the service being registered.</typeparam>
         /// <param name="id">The symbol to identify the registration with.</param>
         /// <returns>The updated registration builder.</returns>
-        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> IdentifiedBy(Symbol id)
+        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> IdentifiedBy<TService>(Symbol id)
+            where TService : notnull
         {
-            return builder.Keyed<Symbol>(id);
+            return builder.Keyed<TService>(id);
+        }
+
+        /// <summary>
+        /// Configures the registration to be identified by the specified symbol, allowing it to be resolved by that
+        /// <paramref name="serviceType"/> and symbol as a key.
+        /// </summary>
+        /// <param name="id">The symbol to identify the registration with.</param>
+        /// <param name="serviceType">The type of the service being registered.</param>
+        /// <returns>The updated registration builder.</returns>
+        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> IdentifiedBy(
+            Symbol id,
+            Type serviceType
+        )
+        {
+            return builder.Keyed(id, serviceType);
+        }
+    }
+
+    extension(IComponentContext @this)
+    {
+        /// <summary>
+        /// Resolves a <typeparamref name="T"/> service that is identified by the given symbol.
+        /// </summary>
+        /// <typeparam name="T">The type of the service to resolve.</typeparam>
+        /// <param name="id">The symbol identifying the service.</param>
+        /// <returns>The resolved service instance.</returns>
+        public T ResolveIdentified<T>(Symbol id)
+            where T : notnull
+        {
+            return @this.ResolveKeyed<T>(id);
+        }
+
+        /// <summary>
+        /// Resolves a service of the specified <paramref name="serviceType"/> that is identified by the given symbol.
+        /// </summary>
+        /// <param name="id">The symbol identifying the service.</param>
+        /// <param name="serviceType">The type of the service to resolve.</param>
+        /// <returns>The resolved service instance.</returns>
+        public object ResolveIdentified(Symbol id, Type serviceType)
+        {
+            return @this.ResolveKeyed(id, serviceType);
         }
     }
 

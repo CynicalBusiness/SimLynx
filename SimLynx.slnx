@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="SimLynx.Features.World/SimLynx.Features.World.csproj" />
   <Project Path="SimLynx/SimLynx.csproj" />
 </Solution>

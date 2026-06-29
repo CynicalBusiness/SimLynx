@@ -16,7 +16,7 @@ public class ScopeTags(params object[] tags)
     /// </remarks>
     /// <param name="obj">The object to check.</param>
     /// <returns>True if the object is one of the tags; otherwise, false.</returns>
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         // ? Autofac uses ".Contains" to check scope matches, which should invoke this method
         return base.Equals(obj) || tags.Contains(obj);

@@ -75,13 +75,13 @@ public class MyGameApp : SimLynxApp
 
 Then, start it:
 
-**!TODO**
+**!TODO quick-start**
 
 ### For UGC Developers
 
 **User-Generated Content** (UGC, sometimes called "mods") is a first-class citizen in SimLynx, and general support is enabled by default. While what kinds of content you can implement are app-specific, some content, like C# code assemblies or [Prototype](#prototypes) configs, are native to SimLynx and should be available.
 
-**!TODO**
+**!TODO more on UGC**
 
 ## General Concepts
 
@@ -91,15 +91,19 @@ More detailed information and references on the ~~wiki~~ (coming soon).
 
 SimLynx utilizes [Autofac](https://autofac.org/) as an IoC container, which allows for a highly versatile architecture, especially when UGC is involved.
 
-If you are unfamiliar with Autofac, Dependency Injection in general, or are already using another DI container, SimLynx can run self-contained and manages its own container. **This is the recommended use** unless you have reason otherwise. You should also brief on [Autofac's general concepts](https://autofac.readthedocs.io/en/latest/getting-started/index.html), as SimLynx relies on many of its features.
+If you are unfamiliar with Autofac, Dependency Injection in general, or are already using another DI container, SimLynx can run self-contained and manages its own container. **This is the recommended use** unless you have reason otherwise (such as already using Autofac). You should also brief on [Autofac's general concepts](https://autofac.readthedocs.io/en/latest/getting-started/index.html), as SimLynx relies on many of its features.
+
+For information on how to use SimLynx's self-contained mode, see the quick-start above.
 
 #### Usage with external Autofac containers
 
-If your application already uses Autofac, it may be preferred, instead, to use SimLynx as a module. SimLynx offers a registration extension for this:
+If your application already uses Autofac, SimLynx can be registered as module:
 
 ```csharp
 containerBuilder.RegisterModule<SimLynxModule<MyGameApp>>();
 ```
+
+The `MyGameApp` service can be injected and used to control SimLynx in a similar way to the self-contained mode: this is what that mode is doing under the hood.
 
 ### The Component Model
 
@@ -115,10 +119,10 @@ Not to be confused with `System.ComponentModel` or the likes of Unity's Componen
 - **Instances** actually hold the state data of the simulation, and are usually nothing more than containers.
     - Instances are simulated by their respective component and only by that component. Said component is responsible for being the API for its instances to allow for other objects to interact with its state, if at all.
 - **Systems** operate broadly on many entities/components at once, allowing for behavior which affects many objects in a batch or across multiple different types of objects.
-    - Unlike ECS, where systems do all of the work, SimLynx systems are much more uncommon and are mostly used for broad-scope jobs like path-finding, power grids, global inventories, etc.
+    - Similar to ECS systems, SimLynx systems are the primary logic driver
     - Systems cannot interact with instances directly, only through their respective components.
 
-While SimLynx broadly shares a lot of concepts with an ECS architecture, and is indeed data-oriented, it is important to understand that the terminology is used differently.
+While SimLynx broadly shares a lot of concepts with an ECS architecture, and is similarly data-oriented, it is important to understand that the terminology is used differently.
 
 #### Supporting Objects
 
@@ -150,13 +154,40 @@ If concurrency management becomes difficult for something like members of compon
 
 ### Prototypes
 
-Prototypes are one of the core ingredients in SimLynx and a primary component behind the built-in UGC support.
+`prototype (n.) - an original model on which something is patterned, archetype`
 
-In essence, prototypes define configuration for various components which can be defined and configured at design-time by loaded content, either programmatically or through configuration files (i.e. YAML/JSON). These configurations remain mutable through the design phase, allowing for content to both introduce new prototypes as well as augment those of other content. Once these prototypes are assembled, they can be used as-is or act as a blueprint for making simulation-time objects.
+Prototypes are one of the core ingredients in SimLynx and a primary component behind the built-in UGC support. They solve two main problems: fill the missing "is a" relationship in component models, and move the expensive/slow reflection work to design-time rather than during the simulation.
+
+Prototypes work by collecting "configurations" during the design phase, then replaying them to construct the final output object. When a prototype extends from another prototype, that prototype's base's configuration is replayed first, with its base before that, and so on. These configurations remain mutable through the design phase, allowing for content to both introduce new prototypes as well as augment those of other content. Once these prototypes are assembled, all the expensive reflection (or otherwise) information is cached, making blueprinting new objects fast.
+
+Additionally, prototypes keep a "hierarchy" of their relationships and allow class-like "extension." A prototype can inherit from another, including its configurations, and will maintain that link for built objects; this means that an object can ask e.g. "is this object a Building?" even if it is not _directly_ from this prototype, similar to polymorphism. This allows for component models, like SimLynx's, to feel much more like OOP and polymorphism, where prototypes fill the "class extension" relationship and components can behave like interfaces, while still benefiting from the flexibility a component model provides.
+
+Main concepts:
+
+- **Prototype**: Mutable collection of "configurations" ("properties") built during design time.
+- **Prototype Target**: Resulting object the prototype produces, the concrete type of which is known as the _target type_.
+- **Prototype Property**: Individual properties of the target the prototype configures
+- **Prototype Blueprint**: Immutable compiled representation of prototypes, built at the start of simulation from each valid defined prototype; essentially finalized instructions for actually assembling target instances.
+
+#### Using Prototypes
 
 Most of SimLynx's core components are derived from prototypes, meaning most can be configured by content out-of-the-box. It is recommended, then, that your app's core components also be built using prototypes to benefit from these features.
 
-**!TODO** More detailed explanation once things are more fleshed out.
+**!TODO** More on actually using prototypes
+
+#### Prototype Loaders
+
+To allow for easier design/iteration for non-developers (and easier UGC), prototypes support different "loaders" which allow them to be configured from non-code sources. These pick up various other types of input, such as config files or engine-specific constructs, and translate them into SimLynx prototypes. Multiple loaders, even of different types, can configure the _same_ prototype, allowing for them to be augmented further by future expansion or user-generated content.
+
+**!TODO** More info about loaders (YAML/JSON?) when they are implemented.
+
+#### Custom Prototypes
+
+In most cases, custom prototypes derive from `Prototype` (or an existing derived type), defining the relevant parameters/properties.
+
+For advanced cases, SimLynx will also accept any implementer of `IPrototype`, but this requires implementing the configuration logic from scratch.
+
+**!TODO** More info on custom prototypes here
 
 ### Phases of Operation
 
