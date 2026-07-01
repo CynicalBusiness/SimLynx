@@ -69,21 +69,21 @@ public static class PrototypingExtensions
     extension(ContainerBuilder @this)
     {
         /// <summary>
-        /// Registers a prototype config provider type with the container with the relevant service type and scope.
+        /// Registers a prototype config resolver type with the container with the relevant service type and scope.
         /// </summary>
-        /// <typeparam name="TProvider">The type of the provider to register.</typeparam>
+        /// <typeparam name="TResolver">The type of the resolver to register.</typeparam>
         /// <returns>The registration builder for further configuration.</returns>
         public IRegistrationBuilder<
-            TProvider,
+            TResolver,
             ConcreteReflectionActivatorData,
             SingleRegistrationStyle
-        > RegisterPrototypeConfigProvider<TProvider>(Symbol slot)
-            where TProvider : class, IPrototypeConfigProvider
+        > RegisterPrototypeConfigResolver<TResolver>(Symbol slot)
+            where TResolver : class, IPrototypeConfigResolver
         {
             return @this
-                .RegisterType<TProvider>()
-                .As<IPrototypeConfigProvider>()
-                .Keyed<IPrototypeConfigProvider>(slot)
+                .RegisterType<TResolver>()
+                .As<IPrototypeConfigResolver>()
+                .Keyed<IPrototypeConfigResolver>(slot)
                 .WithProperty(s => s.Slot, slot)
                 .DesignInstance();
         }

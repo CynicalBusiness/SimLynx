@@ -11,9 +11,9 @@ public interface IPrototypeConfig
     public string Name { get; }
 
     /// <summary>
-    /// The provider of this configuration, which is responsible for creating and managing it.
+    /// The resolver of this configuration, which is responsible for creating and managing it.
     /// </summary>
-    public IPrototypeConfigProvider Provider { get; }
+    public IPrototypeConfigResolver Resolver { get; }
 
     /// <summary>
     /// Clears this config, returning if clearing was successful. If this config had nothing to clear, <c>false</c> is

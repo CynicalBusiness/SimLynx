@@ -22,7 +22,7 @@ public static class PrototypePropertyExtensions
         {
             if (
                 !@this.TryGetConfig<IPrototypePropertyConfig>(
-                    PrototypePropertyConfigProvider.PROPERTIES_SLOT_NAME,
+                    PrototypePropertyConfigResolver.PROPERTIES_SLOT_NAME,
                     propertyName,
                     out var config
                 )

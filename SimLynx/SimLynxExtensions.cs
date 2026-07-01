@@ -43,7 +43,7 @@ public static class SimLynxExtensions
         /// <param name="bailAtType">The type at which to stop checking the inheritance chain, or <c>null</c> to check all the way up the hierarchy.</param>
         /// <param name="found">The found closed generic type, if any.</param>
         /// <returns><c>true</c> if the type is a subclass of the specified raw generic type; otherwise, <c>false</c>.</returns>
-        public bool IsSubclassOfRawGeneric(Type generic, Type? bailAtType, [MaybeNullWhen(false)] out Type found)
+        public bool IsSubclassOfGenericDefinition(Type generic, Type? bailAtType, [MaybeNullWhen(false)] out Type found)
         {
             Type? next = @this;
             while (next != null && next != bailAtType)
@@ -59,22 +59,22 @@ public static class SimLynxExtensions
             return false;
         }
 
-        /// <inheritdoc cref="IsSubclassOfRawGeneric(Type, Type?, out Type)"/>
-        public bool IsSubclassOfRawGeneric(Type generic, [MaybeNullWhen(false)] out Type found)
+        /// <inheritdoc cref="IsSubclassOfGenericDefinition(Type, Type?, out Type)"/>
+        public bool IsSubclassOfGenericDefinition(Type generic, [MaybeNullWhen(false)] out Type found)
         {
-            return IsSubclassOfRawGeneric(@this, generic, null, out found);
+            return IsSubclassOfGenericDefinition(@this, generic, null, out found);
         }
 
-        /// <inheritdoc cref="IsSubclassOfRawGeneric(Type, Type?, out Type)"/>
-        public bool IsSubclassOfRawGeneric(Type generic)
+        /// <inheritdoc cref="IsSubclassOfGenericDefinition(Type, Type?, out Type)"/>
+        public bool IsSubclassOfGenericDefinition(Type generic)
         {
-            return IsSubclassOfRawGeneric(@this, generic, null, out _);
+            return IsSubclassOfGenericDefinition(@this, generic, null, out _);
         }
 
-        /// <inheritdoc cref="IsSubclassOfRawGeneric(Type, Type?, out Type)"/>
-        public bool IsSubclassOfRawGeneric(Type generic, Type? bailAtType)
+        /// <inheritdoc cref="IsSubclassOfGenericDefinition(Type, Type?, out Type)"/>
+        public bool IsSubclassOfGenericDefinition(Type generic, Type? bailAtType)
         {
-            return IsSubclassOfRawGeneric(@this, generic, bailAtType, out _);
+            return IsSubclassOfGenericDefinition(@this, generic, bailAtType, out _);
         }
 
         /// <summary>

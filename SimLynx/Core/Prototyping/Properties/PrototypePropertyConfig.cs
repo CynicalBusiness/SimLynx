@@ -8,9 +8,9 @@ namespace SimLynx.Core.Prototyping.Properties;
 /// Prototype config for a class property of a prototype-able <typeparamref name="TValue"/> property of the subject.
 /// </summary>
 /// <typeparam name="TValue">The type value of the property</typeparam>
-/// <param name="provider">The provider for the prototype config.</param>
+/// <param name="resolver">The resolver for the prototype config.</param>
 /// <param name="property">The property info for the prototype property.</param>
-public class PrototypePropertyConfig<TValue>(IPrototypeConfigProvider provider, PropertyInfo property)
+public class PrototypePropertyConfig<TValue>(IPrototypeConfigResolver resolver, PropertyInfo property)
     : IPrototypePropertyConfig
 {
     /// <inheritdoc/>
@@ -20,7 +20,7 @@ public class PrototypePropertyConfig<TValue>(IPrototypeConfigProvider provider, 
     public string Name => Property.Name;
 
     /// <inheritdoc/>
-    public IPrototypeConfigProvider Provider { get; } = provider;
+    public IPrototypeConfigResolver Resolver { get; } = resolver;
 
     /// <inheritdoc cref="IPrototypePropertyConfig.Value"/>
     public Maybe<TValue> Value
@@ -75,7 +75,7 @@ public class PrototypePropertyConfig<TValue>(IPrototypeConfigProvider provider, 
     }
 
     /// <inheritdoc cref="IPrototypePropertyConfig.ModifyValue(Func{object?, object?})"/>
-    public void ModifyValue(Func<TValue?, TValue> modifier)
+    public void ModifyValue(Func<TValue, TValue> modifier)
     {
         Modifiers.Add(modifier);
     }

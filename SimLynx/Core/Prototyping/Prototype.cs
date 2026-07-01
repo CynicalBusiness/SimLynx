@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Autofac;
+using Autofac.Features.Indexed;
+using SimLynx.Core.Prototyping.Blueprints;
 
 namespace SimLynx.Core.Prototyping;
 
@@ -11,7 +13,10 @@ namespace SimLynx.Core.Prototyping;
 /// <remarks>
 /// Contains default implementations and helpers suitable for most prototypes.
 /// </remarks>
-public abstract class Prototype<TSubject>(Symbol id, IComponentContext scope) : IPrototype<TSubject>
+public abstract class Prototype<TSubject>(
+    Symbol id,
+    IIndex<Symbol, IEnumerable<IPrototypeConfigResolver>> resolversIndex
+) : IPrototype<TSubject>
     where TSubject : class, IPrototypeSubject
 {
     private readonly Dictionary<Symbol, Dictionary<string, IPrototypeConfig>> configs = [];
@@ -90,7 +95,7 @@ public abstract class Prototype<TSubject>(Symbol id, IComponentContext scope) : 
     }
 
     /// <inheritdoc/>
-    public IPrototypeBlueprint<TSubject> Compile()
+    public IBlueprint<TSubject> Compile()
     {
         throw new NotImplementedException(); // TODO
     }
@@ -114,11 +119,11 @@ public abstract class Prototype<TSubject>(Symbol id, IComponentContext scope) : 
         }
 
         // none found, try to create one from a provider
-        foreach (var resolvedProvider in scope.ResolveIdentified<IEnumerable<IPrototypeConfigProvider>>(slot))
+        foreach (var resolver in resolversIndex[slot])
         {
-            if (resolvedProvider is IPrototypeConfigProvider<TConfig> typedProvider)
+            if (resolver is IPrototypeConfigProvider<TConfig> provider)
             {
-                config = typedProvider.TryCreate(this, configName);
+                config = provider.TryCreate(this, configName);
                 if (config is not null)
                 {
                     this[slot, configName] = config;
@@ -129,5 +134,11 @@ public abstract class Prototype<TSubject>(Symbol id, IComponentContext scope) : 
 
         config = default;
         return false;
+    }
+
+    /// <inheritdoc/>
+    public override string ToString()
+    {
+        return $"{GetType().Name}<{typeof(TSubject).Name}>#{Id}";
     }
 }

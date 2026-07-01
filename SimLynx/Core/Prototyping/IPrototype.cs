@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using SimLynx.Core.Prototyping.Blueprints;
 
 namespace SimLynx.Core.Prototyping;
 
@@ -74,7 +75,7 @@ public interface IPrototype
     /// Compiles this prototype into an immutable blueprint, which can be used as a factory to create subject instances.
     /// </summary>
     /// <returns>A compiled blueprint for this prototype.</returns>
-    public IPrototypeBlueprint Compile();
+    public IBlueprint Compile();
 }
 
 /// <inheritdoc cref="IPrototype"/>
@@ -83,7 +84,7 @@ public interface IPrototype<out TSubject> : IPrototype
     where TSubject : class, IPrototypeSubject
 {
     /// <inheritdoc cref="IPrototype.Compile"/>
-    public new IPrototypeBlueprint<TSubject> Compile();
+    public new IBlueprint<TSubject> Compile();
 
-    IPrototypeBlueprint IPrototype.Compile() => Compile();
+    IBlueprint IPrototype.Compile() => Compile();
 }

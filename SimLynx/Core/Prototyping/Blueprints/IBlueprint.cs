@@ -1,12 +1,12 @@
 using Autofac;
 
-namespace SimLynx.Core.Prototyping;
+namespace SimLynx.Core.Prototyping.Blueprints;
 
 /// <summary>
 /// An immutable compiled blueprint for a prototype, containing all information necessary to create, configure, or
 /// otherwise build an object in which it is a prototype of.
 /// </summary>
-public interface IPrototypeBlueprint
+public interface IBlueprint
 {
     /// <summary>
     /// The prototype this blueprint was compiled from.
@@ -25,7 +25,7 @@ public interface IPrototypeBlueprint
 /// otherwise build a(n) <typeparamref name="TSubject"/> instance.
 /// </summary>
 /// <typeparam name="TSubject">The type of object this blueprint creates.</typeparam>
-public interface IPrototypeBlueprint<out TSubject> : IPrototypeBlueprint
+public interface IBlueprint<out TSubject> : IBlueprint
     where TSubject : class, IPrototypeSubject
 {
     /// <summary>
@@ -33,7 +33,7 @@ public interface IPrototypeBlueprint<out TSubject> : IPrototypeBlueprint
     /// </summary>
     public new IPrototype<TSubject> Prototype { get; }
 
-    IPrototype IPrototypeBlueprint.Prototype => Prototype;
+    IPrototype IBlueprint.Prototype => Prototype;
 
     /// <summary>
     /// Creates a new <typeparamref name="TSubject"/> instance.
@@ -41,5 +41,5 @@ public interface IPrototypeBlueprint<out TSubject> : IPrototypeBlueprint
     /// <returns>A new instance of <typeparamref name="TSubject"/>.</returns>
     public new TSubject CreateInstance();
 
-    object IPrototypeBlueprint.CreateInstance() => CreateInstance();
+    object IBlueprint.CreateInstance() => CreateInstance();
 }

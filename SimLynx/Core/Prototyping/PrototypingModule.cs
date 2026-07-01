@@ -7,8 +7,8 @@ internal sealed class PrototypingModule : Module
 {
     protected override void Load(ContainerBuilder builder)
     {
-        builder.RegisterPrototypeConfigProvider<PrototypePropertyConfigProvider>(
-            PrototypePropertyConfigProvider.PROPERTIES_SLOT_NAME
+        builder.RegisterPrototypeConfigResolver<PrototypePropertyConfigResolver>(
+            PrototypePropertyConfigResolver.PROPERTIES_SLOT_NAME
         );
     }
 }
