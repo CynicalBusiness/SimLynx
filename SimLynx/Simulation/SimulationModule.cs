@@ -1,5 +1,4 @@
 using Autofac;
-using Microsoft.Extensions.Logging;
 using SimLynx.Core.Hooks;
 using SimLynx.Core.Phasing;
 

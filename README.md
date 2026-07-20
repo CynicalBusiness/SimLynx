@@ -164,14 +164,12 @@ Additionally, prototypes keep a "hierarchy" of their relationships and allow cla
 
 Main concepts:
 
-- **Prototype**: Mutable collection of "configurations" ("properties") built during design time.
-- **Prototype Target**: Resulting object the prototype produces, the concrete type of which is known as the _target type_.
-- **Prototype Property**: Individual properties of the target the prototype configures
-- **Prototype Blueprint**: Immutable compiled representation of prototypes, built at the start of simulation from each valid defined prototype; essentially finalized instructions for actually assembling target instances.
+- **Prototype**: Mutable collection of "configurations; built during design time.
+- **Prototype Config**: Individual configurations on a prototype
+- **Prototype Subject**: Resulting object the prototype produces, the concrete type of which is known as the _subject type_.
+- **Prototype Blueprint**: Immutable compiled assembly instructions for actually instancing subjects; built at the start of simulation.
 
 #### Using Prototypes
-
-Most of SimLynx's core components are derived from prototypes, meaning most can be configured by content out-of-the-box. It is recommended, then, that your app's core components also be built using prototypes to benefit from these features.
 
 **!TODO** More on actually using prototypes
 

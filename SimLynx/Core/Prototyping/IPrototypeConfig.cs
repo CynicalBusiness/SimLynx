@@ -1,3 +1,6 @@
+using System.ComponentModel;
+using SimLynx.Core.Prototyping.Blueprints;
+
 namespace SimLynx.Core.Prototyping;
 
 /// <summary>
@@ -11,13 +14,28 @@ public interface IPrototypeConfig
     public string Name { get; }
 
     /// <summary>
-    /// The resolver of this configuration, which is responsible for creating and managing it.
+    /// Whether this configuration is empty, meaning it has no effect on the prototype or its blueprint.
     /// </summary>
-    public IPrototypeConfigResolver Resolver { get; }
+    public bool IsEmpty { get; }
 
     /// <summary>
     /// Clears this config, returning if clearing was successful. If this config had nothing to clear, <c>false</c> is
     /// returned.
     /// </summary>
     public bool Clear();
+}
+
+/// <summary>
+/// A type of <see cref="IPrototypeConfig"/> for a <typeparamref name="TSubject"/> subject.
+/// </summary>
+public interface IPrototypeConfig<TSubject> : IPrototypeConfig
+    where TSubject : class, IPrototypeSubject
+{
+    /// <summary>
+    /// Applies this configuration to a blueprint <paramref name="builder"/>.
+    /// </summary>
+    /// <param name="builder">The blueprint builder to which this configuration should be applied.</param>
+    /// <returns>True if the configuration was applied, false if none was done/needed.</returns>
+    [EditorBrowsable(EditorBrowsableState.Advanced)]
+    public bool Apply(BlueprintBuilder<TSubject> builder);
 }

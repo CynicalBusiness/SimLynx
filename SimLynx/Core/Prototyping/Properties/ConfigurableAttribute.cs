@@ -1,6 +1,6 @@
 using System;
 
-namespace SimLynx.Core.Prototyping;
+namespace SimLynx.Core.Prototyping.Properties;
 
 /// <summary>
 /// Allows for flagging a prototype's property as configurable (or not).

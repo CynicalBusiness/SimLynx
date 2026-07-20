@@ -23,7 +23,7 @@ public static class SimulationExtensions
         > RegisterStage<TStage>(string stageName)
             where TStage : IStage
         {
-            return @this.RegisterType<TStage>().Named<IStage>(stageName).InstancePerStage();
+            return @this.RegisterType<TStage>().Named<IStage>(stageName).InstancePerSimulationStage();
         }
     }
 
@@ -45,7 +45,7 @@ public static class SimulationExtensions
         /// Configures the component to be instanced once per simulation <see cref="IStage"/>.
         /// </summary>
         /// <returns>The builder for further configuration.</returns>
-        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> InstancePerStage()
+        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> InstancePerSimulationStage()
         {
             return builder.InstancePerOwned<IStage>();
         }

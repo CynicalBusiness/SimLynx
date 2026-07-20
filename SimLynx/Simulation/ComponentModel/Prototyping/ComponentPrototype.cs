@@ -1,13 +1,13 @@
 using SimLynx.Core.Prototyping;
 
-namespace SimLynx.Simulation.ComponentModel;
+namespace SimLynx.Simulation.ComponentModel.Prototyping;
 
 /// <summary>
 /// Base class for a prototype of a <see cref="Component"/>.
 /// </summary>
-public class ComponentPrototype<TComponent>(Symbol id, Autofac.IComponentContext ctx)
+public class ComponentPrototype<TComponent>(Symbol id, PrototypeContext<TComponent> ctx)
     : Prototype<TComponent>(id, ctx),
-        IComponentPrototype
+        IComponentPrototype<TComponent>
     where TComponent : Component
 {
     /// <summary>

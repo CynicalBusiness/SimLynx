@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using SimLynx.Core.Prototyping.Blueprints;
 
@@ -45,30 +44,27 @@ public interface IPrototype
     public Type SubjectType { get; }
 
     /// <summary>
-    /// Tries to get a config for the slot with the given <paramref name="slot"/> on this prototype at the given
-    /// <paramref name="configName"/>.
+    /// Gets a config slot on this prototype by its <paramref name="slotId"/>, if possible.
     /// </summary>
-    /// <param name="slot">The ID of the slot.</param>
-    /// <param name="configName">The name of the config.</param>
-    /// <param name="config">The fetched/created configuration, if found/valid for this prototype.</param>
-    /// <returns>True if the configuration was found; otherwise, false.</returns>
-    /// <exception cref="InvalidOperationException">If no such slot exists for the given <paramref name="slot"/>.</exception>
-    public bool TryGetConfig(Symbol slot, string configName, [MaybeNullWhen(false)] out IPrototypeConfig config)
-    {
-        return TryGetConfig<IPrototypeConfig>(slot, configName, out config);
-    }
+    /// <param name="slotId">The ID of the slot to retrieve.</param>
+    /// <returns>The config slot if found; otherwise, null.</returns>
+    public IPrototypeConfigSlot? this[Symbol slotId] { get; }
 
     /// <summary>
-    /// Tries to get a config for the slot with the given <paramref name="slot"/> on this prototype at the given
-    /// <paramref name="configName"/>.
+    /// Tries to resolve a config slot on this prototype by its <paramref name="slotId"/>.
     /// </summary>
-    /// <typeparam name="TConfig">The type of configuration to fetch or create.</typeparam>
-    /// <param name="slot">The ID of the slot.</param>
-    /// <param name="configName">The name of the config.</param>
-    /// <param name="config">The fetched/created configuration, if found/valid for this prototype.</param>
-    /// <returns>True if the configuration was found; otherwise, false.</returns>
-    /// <exception cref="InvalidOperationException">If no such slot exists for the given <paramref name="slot"/>.</exception>
-    public bool TryGetConfig<TConfig>(Symbol slot, string configName, [MaybeNullWhen(false)] out TConfig config)
+    /// <param name="slotId">The ID of the slot to resolve.</param>
+    /// <param name="slot">The resolved slot, if found.</param>
+    /// <returns>True if the slot was found; otherwise, false.</returns>
+    public bool TryGetSlot(Symbol slotId, [MaybeNullWhen(false)] out IPrototypeConfigSlot slot);
+
+    /// <summary>
+    /// Tries to resolve a config slot on this prototype which supports the <typeparamref name="TConfig"/> type.
+    /// </summary>
+    /// <typeparam name="TConfig">The type of configuration the slot must support.</typeparam>
+    /// <param name="slot">The resolved slot, if found.</param>
+    /// <returns>True if the slot was found; otherwise, false.</returns>
+    public bool TryGetSlot<TConfig>([MaybeNullWhen(false)] out IPrototypeConfigSlotOf<TConfig> slot)
         where TConfig : class, IPrototypeConfig;
 
     /// <summary>

@@ -1,3 +1,5 @@
+using SimLynx.Core.Prototyping.Properties;
+
 namespace SimLynx.Core.Prototyping;
 
 /// <summary>

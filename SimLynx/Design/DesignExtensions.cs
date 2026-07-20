@@ -15,7 +15,7 @@ public static class DesignExtensions
         /// Configures the registration to be a design instance, meaning it will be shared within the design phase but not outside of it.
         /// </summary>
         /// <returns>A registration builder to further configure the component.</returns>
-        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> DesignInstance()
+        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> InstancePerDesign()
         {
             return builder.InstancePerOwned<DesignPhase>();
         }

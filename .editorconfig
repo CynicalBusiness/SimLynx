@@ -14,8 +14,11 @@ insert_final_newline = true
 [*.cs]
 max_line_length = 120
 
+# IDE0005: Using directive is unnecessary (want to make sure we clean these up)
+dotnet_diagnostic.IDE0005.severity = warning
+
 # IDE0055: Fix formatting (conflicts with CSharpier)
 dotnet_diagnostic.IDE0055.severity = none
 
-# CA1816: Dispose methods should call SuppressFinalize
+# CA1816: Dispose methods should call SuppressFinalize (extra noise and false-positive more often than not)
 dotnet_diagnostic.CA1816.severity = silent

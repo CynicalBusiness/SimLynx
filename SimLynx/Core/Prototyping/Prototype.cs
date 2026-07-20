@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using Autofac;
-using Autofac.Features.Indexed;
 using SimLynx.Core.Prototyping.Blueprints;
 
 namespace SimLynx.Core.Prototyping;
@@ -13,13 +11,15 @@ namespace SimLynx.Core.Prototyping;
 /// <remarks>
 /// Contains default implementations and helpers suitable for most prototypes.
 /// </remarks>
-public abstract class Prototype<TSubject>(
-    Symbol id,
-    IIndex<Symbol, IEnumerable<IPrototypeConfigResolver>> resolversIndex
-) : IPrototype<TSubject>
+public class Prototype<TSubject>(Symbol id, PrototypeContext<TSubject> context) : IPrototype<TSubject>
     where TSubject : class, IPrototypeSubject
 {
-    private readonly Dictionary<Symbol, Dictionary<string, IPrototypeConfig>> configs = [];
+    private readonly Dictionary<Type, IPrototypeConfigSlot<TSubject, IPrototypeConfig>?> typedSlotsCache = [];
+
+    /// <summary>
+    /// Dictionary of config slots for this prototype, keyed by their slot ID.
+    /// </summary>
+    protected Dictionary<Symbol, IPrototypeConfigSlot<TSubject, IPrototypeConfig>> Slots { get; } = [];
 
     /// <inheritdoc/>
     public Symbol Id { get; } = id;
@@ -49,96 +49,127 @@ public abstract class Prototype<TSubject>(
     public virtual Type SubjectType => typeof(TSubject);
 
     /// <summary>
-    /// Gets the currently-defined config, if any, for the given <paramref name="slot"/> and <paramref name="configName"/>.
+    /// Gets the currently-defined config, if any, for the given <paramref name="slotId"/> and <paramref name="configName"/>.
     /// </summary>
-    /// <param name="slot">The slot for which to retrieve the config.</param>
+    /// <param name="slotId">The slot for which to retrieve the config.</param>
     /// <param name="configName">The name of the config to retrieve.</param>
     /// <returns>The config if found; otherwise, <c>null</c>.</returns>
-    public IPrototypeConfig? this[Symbol slot, string configName]
-    {
-        get
-        {
-            if (configs.TryGetValue(slot, out var configsForSlot))
-            {
-                if (configsForSlot.TryGetValue(configName, out var config))
-                {
-                    return config;
-                }
-            }
-            return default;
-        }
-        private set
-        {
-            configs.TryGetValue(slot, out var configsForSlot);
+    public IPrototypeConfig? this[Symbol slotId, string configName] => this[slotId]?[configName];
 
-            if (value is null)
-            {
-                if (configsForSlot is not null)
-                {
-                    configsForSlot.Remove(configName);
-                    if (configsForSlot.Count == 0)
-                    {
-                        configs.Remove(slot);
-                    }
-                }
-            }
-            else
-            {
-                if (configsForSlot is null)
-                {
-                    configsForSlot = [];
-                    configs[slot] = configsForSlot;
-                }
-                configsForSlot[configName] = value;
-            }
-        }
-    }
+    /// <inheritdoc cref="IPrototype.this[Symbol]"/>
+    public IPrototypeConfigSlot<TSubject, IPrototypeConfig>? this[Symbol slotId] => Slots.GetValueOrDefault(slotId);
+
+    IPrototypeConfigSlot? IPrototype.this[Symbol slotId] => this[slotId];
+
+    /// <summary>
+    /// Resolver for config slots for this prototype.
+    /// </summary>
+    protected PrototypeConfigSlotResolver<TSubject> ConfigSlotResolver => context.ConfigSlotResolverFactory(this);
 
     /// <inheritdoc/>
     public IBlueprint<TSubject> Compile()
     {
-        throw new NotImplementedException(); // TODO
+        var builder = new BlueprintBuilder<TSubject>(this);
+
+        foreach (var slot in Slots.Values)
+        {
+            slot.Configure(builder);
+        }
+
+        return builder.Build();
     }
 
-    /// <inheritdoc/>
-    public bool TryGetConfig<TConfig>(Symbol slot, string configName, [MaybeNullWhen(false)] out TConfig config)
-        where TConfig : class, IPrototypeConfig
+    /// <inheritdoc cref="IPrototype.TryGetSlot"/>
+    public bool TryGetSlot(
+        Symbol slotId,
+        [MaybeNullWhen(false)] out IPrototypeConfigSlot<TSubject, IPrototypeConfig> slot
+    )
     {
-        // try to find an existing config for this slot and name
-        var currentConfig = this[slot, configName];
-        if (currentConfig is not null)
+        if (!Slots.TryGetValue(slotId, out slot))
         {
-            if (currentConfig is not TConfig typedConfig)
+            if (
+                ConfigSlotResolver.TryResolve(slotId, out var resolvedSlot)
+                && resolvedSlot is IPrototypeConfigSlot<TSubject, IPrototypeConfig> typedSlot
+            )
             {
-                throw new InvalidOperationException(
-                    $"An existing config for '{slot}/{configName}' is of type {currentConfig.GetType().FullName}, which is not assignable to the requested type {typeof(TConfig).FullName}."
-                );
+                Slots[slotId] = typedSlot;
+                slot = typedSlot;
+                return true;
             }
-            config = typedConfig;
+            else
+            {
+                slot = default;
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    bool IPrototype.TryGetSlot(Symbol slotId, [MaybeNullWhen(false)] out IPrototypeConfigSlot slot)
+    {
+        if (TryGetSlot(slotId, out var typedSlot))
+        {
+            slot = typedSlot;
             return true;
         }
 
-        // none found, try to create one from a provider
-        foreach (var resolver in resolversIndex[slot])
+        slot = default;
+        return false;
+    }
+
+    /// <inheritdoc cref="IPrototype.TryGetSlot{TConfig}"/>
+    public bool TryGetSlot<TConfig>([MaybeNullWhen(false)] out IPrototypeConfigSlot<TSubject, TConfig> slot)
+        where TConfig : class, IPrototypeConfig
+    {
+        if (typedSlotsCache.TryGetValue(typeof(TConfig), out var cachedSlot))
         {
-            if (resolver is IPrototypeConfigProvider<TConfig> provider)
-            {
-                config = provider.TryCreate(this, configName);
-                if (config is not null)
-                {
-                    this[slot, configName] = config;
-                    return true;
-                }
-            }
+            slot = cachedSlot as IPrototypeConfigSlot<TSubject, TConfig>;
+            return slot is not null;
         }
 
-        config = default;
+        if (!ConfigSlotResolver.TryResolve<TConfig>(out var resolvedSlot))
+        {
+            slot = default;
+            typedSlotsCache[typeof(TConfig)] = null;
+            return false;
+        }
+
+        if (Slots.TryGetValue(resolvedSlot.Id, out var existingSlot))
+        {
+            if (existingSlot is not IPrototypeConfigSlot<TSubject, TConfig> typedSlot)
+            {
+                throw new InvalidOperationException(
+                    $"An existing config slot for '{resolvedSlot.Id}' is of type {existingSlot.GetType().FullName}, which is not assignable to the requested type {typeof(IPrototypeConfigSlot<TSubject, TConfig>).FullName}."
+                );
+            }
+            slot = typedSlot;
+        }
+        else
+        {
+            Slots[resolvedSlot.Id] = resolvedSlot;
+            slot = resolvedSlot;
+        }
+
+        typedSlotsCache[typeof(TConfig)] = slot;
+        return true;
+    }
+
+    bool IPrototype.TryGetSlot<TConfig>([MaybeNullWhen(false)] out IPrototypeConfigSlotOf<TConfig> slot)
+    {
+        if (TryGetSlot<TConfig>(out var typedSlot))
+        {
+            slot = typedSlot;
+            return true;
+        }
+
+        slot = default;
         return false;
     }
 
     /// <inheritdoc/>
     public override string ToString()
     {
-        return $"{GetType().Name}<{typeof(TSubject).Name}>#{Id}";
+        return $"{GetType().Name}<{SubjectType.Name}>#{Id}";
     }
 }

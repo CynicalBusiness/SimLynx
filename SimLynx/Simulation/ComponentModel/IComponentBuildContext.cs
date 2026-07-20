@@ -1,3 +1,5 @@
+using SimLynx.Simulation.ComponentModel.Prototyping;
+
 namespace SimLynx.Simulation.ComponentModel;
 
 /// <summary>

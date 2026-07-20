@@ -1,5 +1,4 @@
 using Autofac;
-using Autofac.Core;
 using SimLynx.Core.Hooks;
 
 namespace SimLynx.Core.Phasing;

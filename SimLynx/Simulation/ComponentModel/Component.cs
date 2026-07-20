@@ -1,4 +1,5 @@
 using SimLynx.Core.Prototyping;
+using SimLynx.Simulation.ComponentModel.Prototyping;
 
 namespace SimLynx.Simulation.ComponentModel;
 

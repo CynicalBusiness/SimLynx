@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Concurrent;
-using System.Threading.Tasks;
 using Autofac;
 using Autofac.Builder;
 using Autofac.Core;
-using Microsoft.Extensions.Logging;
 
 namespace SimLynx.Core.Hooks;
 

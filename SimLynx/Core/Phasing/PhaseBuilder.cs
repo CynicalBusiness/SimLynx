@@ -1,9 +1,6 @@
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
-using Autofac.Core;
-using Autofac.Features.OwnedInstances;
 using Microsoft.Extensions.Logging;
 using SimLynx.Core.Hooks;
 using SimLynx.Core.Logging;

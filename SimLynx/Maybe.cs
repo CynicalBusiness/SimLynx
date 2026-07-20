@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 
-namespace SimLynx.Core;
+namespace SimLynx;
 
 /// <summary>
 /// Container type for an optional <typeparamref name="T"/> value. Similar to <see cref="Nullable{T}"/>, but can be used

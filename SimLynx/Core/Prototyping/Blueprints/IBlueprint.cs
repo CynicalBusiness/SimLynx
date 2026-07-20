@@ -17,7 +17,7 @@ public interface IBlueprint
     /// Creates a new instance of the subject object for this blueprint's <see cref="Prototype"/>.
     /// </summary>
     /// <returns>A new instance of the subject object.</returns>
-    public object CreateInstance();
+    public object CreateInstance(ILifetimeScope scope);
 }
 
 /// <summary>
@@ -38,8 +38,9 @@ public interface IBlueprint<out TSubject> : IBlueprint
     /// <summary>
     /// Creates a new <typeparamref name="TSubject"/> instance.
     /// </summary>
+    /// <param name="scope">The Autofac scope used to resolve dependencies.</param>
     /// <returns>A new instance of <typeparamref name="TSubject"/>.</returns>
-    public new TSubject CreateInstance();
+    public new TSubject CreateInstance(ILifetimeScope scope);
 
-    object IBlueprint.CreateInstance() => CreateInstance();
+    object IBlueprint.CreateInstance(ILifetimeScope scope) => CreateInstance(scope);
 }

@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+using Autofac;
 using Autofac.Core;
 
 namespace SimLynx.Core.Prototyping.Blueprints;
@@ -12,13 +12,43 @@ namespace SimLynx.Core.Prototyping.Blueprints;
 public class BlueprintBuilder<TSubject>(IPrototype<TSubject> prototype)
     where TSubject : class, IPrototypeSubject
 {
-    private readonly List<Parameter> injectionParams = [];
-    private readonly Dictionary<Type, object> context = [];
+    /// <summary>
+    /// Handler delegate for <see cref="OnBeforeCreate"/>.
+    /// </summary>
+    /// <param name="context">The context for the build operation.</param>
+    /// <returns>Additional injection parameters to be used when creating the subject.</returns>
+    public delegate IEnumerable<Parameter> PreCreateHandler(BuildContext context);
+
+    /// <summary>
+    /// Handler delegate for <see cref="OnCreate"/>.
+    /// </summary>
+    /// <param name="context">The context for the build operation.</param>
+    /// <param name="subject">The newly-created subject instance.</param>
+    public delegate void PostCreateHandler(BuildContext context, TSubject subject);
+
+    /// <summary>
+    /// The list of injection parameters to be used when creating a new instance of the subject.
+    /// </summary>
+    public List<Parameter> InjectionParameters = [];
+
+    /// <summary>
+    /// Context dictionary used to store state shared between configs.
+    /// </summary>
+    /// <remarks>
+    /// This dictionary is shared between builds and is cloned into <see cref="BuildContext.InstanceOptions"/> for each
+    /// build operation.
+    /// </remarks>
+    public TypeDictionary Options { get; } = [];
+
+    /// <summary>
+    /// Action invoked on each creation attempt but before the subject is created.
+    /// </summary>
+    public PreCreateHandler? OnBeforeCreate { get; set; }
 
     /// <summary>
     /// The action to be invoked after a new instance of the subject is created.
     /// </summary>
-    public Action<TSubject>? OnCreated { get; set; }
+    public PostCreateHandler? OnCreate { get; set; }
 
     /// <summary>
     /// The prototype for which the blueprint is being built.
@@ -26,98 +56,19 @@ public class BlueprintBuilder<TSubject>(IPrototype<TSubject> prototype)
     public IPrototype<TSubject> Prototype { get; } = prototype;
 
     /// <summary>
-    /// The injection parameters to be used when creating the subject instance. These parameters can be used to provide
-    /// values for injected dependencies.
+    /// Builds the blueprint.
     /// </summary>
-    public IEnumerable<Parameter> InjectionParameters => injectionParams;
-
-    /// <summary>
-    /// Adds a new injection parameter to the blueprint builder. When assembling the subject, this parameter can be
-    /// used to provide an alternate value for an injected dependency.
-    /// </summary>
-    /// <param name="parameter">The injection parameter to add.</param>
-    public void Inject(Parameter parameter)
+    /// <returns>The constructed blueprint for the subject type.</returns>
+    /// <exception cref="NotImplementedException"></exception>
+    public IBlueprint<TSubject> Build()
     {
-        injectionParams.Add(parameter);
+        return new Blueprint<TSubject>(this);
     }
 
     /// <summary>
-    /// Gets a context object of the specified type. If the context object does not exist, a new instance is created.
+    /// Context for a build operation.
     /// </summary>
-    /// <remarks>
-    /// Context objects are used to store state that is shared between configs during the blueprint building process and
-    /// are not passed to the compiled blueprint nor subject.
-    /// </remarks>
-    /// <typeparam name="TContext">The type of the context object.</typeparam>
-    /// <returns>The context object of the specified type.</returns>
-    public TContext GetContext<TContext>()
-        where TContext : notnull, new()
-    {
-        if (!TryGetContext<TContext>(out var contextObject))
-        {
-            contextObject = new TContext();
-            SetContext(contextObject);
-        }
-        return contextObject;
-    }
-
-    /// <summary>
-    /// Gets a context object of the specified type. If the context object does not exist, a new instance is created
-    /// using the provided factory.
-    /// </summary>
-    /// <remarks>
-    /// Context objects are used to store state that is shared between configs during the blueprint building process and
-    /// are not passed to the compiled blueprint nor subject.
-    /// </remarks>
-    /// <typeparam name="TContext">The type of the context object.</typeparam>
-    /// <param name="factory">The factory function to create a new instance of the context object if it does not exist.</param>
-    /// <returns>The context object of the specified type.</returns>
-    public TContext GetContext<TContext>(Func<TContext> factory)
-        where TContext : notnull
-    {
-        if (!TryGetContext<TContext>(out var contextObject))
-        {
-            contextObject = factory();
-            SetContext(contextObject);
-        }
-        return contextObject;
-    }
-
-    /// <summary>
-    /// Sets the context object of the specified type. If a context object of that type already exists, it is replaced.
-    /// </summary>
-    /// <remarks>
-    /// Context objects are used to store state that is shared between configs during the blueprint building process and
-    /// are not passed to the compiled blueprint nor subject.
-    /// </remarks>
-    /// <typeparam name="TContext">The type of the context object.</typeparam>
-    /// <param name="contextObject">The context object to set.</param>
-    public void SetContext<TContext>(TContext contextObject)
-        where TContext : notnull
-    {
-        context[typeof(TContext)] = contextObject;
-    }
-
-    /// <summary>
-    /// Tries to get a context object of the specified type. If the context object does not exist, returns false.
-    /// </summary>
-    /// <remarks>
-    /// Context objects are used to store state that is shared between configs during the blueprint building process and
-    /// are not passed to the compiled blueprint nor subject.
-    /// </remarks>
-    /// <typeparam name="TContext">The type of the context object.</typeparam>
-    /// <param name="contextObject">When this method returns, contains the context object of the specified type, ifit exists; otherwise, the default value for the type.</param>
-    /// <returns>true if the context object exists; otherwise, false.</returns>
-    public bool TryGetContext<TContext>([NotNullWhen(true)] out TContext? contextObject)
-        where TContext : notnull
-    {
-        var type = typeof(TContext);
-        if (context.TryGetValue(type, out var value))
-        {
-            contextObject = (TContext)value;
-            return true;
-        }
-        contextObject = default;
-        return false;
-    }
+    /// <param name="Scope">The Autofac scope used to resolve dependencies.</param>
+    /// <param name="InstanceOptions">The instance-specific context dictionary for resolving dependencies.</param>
+    public record BuildContext(TypeDictionary InstanceOptions, ILifetimeScope Scope);
 }

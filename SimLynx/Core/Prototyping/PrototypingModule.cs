@@ -7,8 +7,15 @@ internal sealed class PrototypingModule : Module
 {
     protected override void Load(ContainerBuilder builder)
     {
-        builder.RegisterPrototypeConfigResolver<PrototypePropertyConfigResolver>(
-            PrototypePropertyConfigResolver.PROPERTIES_SLOT_NAME
+        builder.RegisterGeneric(typeof(PrototypeConfigSlotResolver<>)).AsSelf().InstancePerDependency();
+        builder.RegisterGeneric(typeof(PrototypeContext<>)).AsSelf().InstancePerDependency();
+        builder.RegisterType<PrototypeResolver>().AsSelf().InstancePerDependency();
+
+        builder.RegisterModule(
+            new PrototypeConfigModule(typeof(PropertyConfigSlot<>), PropertyConfigSlot.SLOT_ID)
+            {
+                ConfigTypes = [typeof(IPropertyConfig), typeof(IPropertyConfig<>), typeof(PropertyConfig<,>)],
+            }
         );
     }
 }

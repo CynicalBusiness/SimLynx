@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
 using Autofac.Builder;
-using Autofac.Core;
 using Autofac.Core.Registration;
 
 namespace SimLynx.Core.Phasing;

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using Autofac;
 using Autofac.Builder;
@@ -16,8 +17,8 @@ namespace SimLynx;
 public static class SimLynxExtensions
 {
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
-    /// <param name="source">The source sequence.</param>
-    extension<T>(IEnumerable<T> source)
+    /// <param name="this">The source sequence.</param>
+    extension<T>(IEnumerable<T> @this)
     {
         /// <summary>
         /// Performs the specified action on each element of the source sequence and yields the element.
@@ -26,11 +27,30 @@ public static class SimLynxExtensions
         /// <returns>An <see cref="IEnumerable{T}"/> that yields the elements of the source sequence after performing the action on each element.</returns>
         public IEnumerable<T> Tap(Action<T> action)
         {
-            foreach (var item in source)
+            foreach (var item in @this)
             {
                 action(item);
                 yield return item;
             }
+        }
+
+        /// <summary>
+        /// Enumerates the source sequence and performs the specified action on each element.
+        /// </summary>
+        /// <param name="action">The action to perform</param>
+        public void ForEach(Action<T, int> action)
+        {
+            int index = 0;
+            foreach (var item in @this)
+            {
+                action(item, index++);
+            }
+        }
+
+        /// <inheritdoc cref="ForEach{T}(IEnumerable{T}, Action{T, int})"/>
+        public void ForEach(Action<T> action)
+        {
+            @this.ForEach((item, _) => action(item));
         }
     }
 
@@ -48,7 +68,10 @@ public static class SimLynxExtensions
             Type? next = @this;
             while (next != null && next != bailAtType)
             {
-                if (next.IsGenericType && next.GetGenericTypeDefinition() == generic)
+                if (
+                    (next.IsGenericType && next.GetGenericTypeDefinition() == generic)
+                    || (next.IsGenericTypeDefinition && next == generic)
+                )
                 {
                     found = next;
                     return true;
@@ -110,6 +133,30 @@ public static class SimLynxExtensions
             return targetType.IsAssignableFrom(@this);
         }
 #endif
+
+        /// <inheritdoc cref="CreatePropertySetter{TInstance, TProperty}(PropertyInfo)"/>
+        public Action<TInstance, TProperty> CreatePropertySetter<TInstance, TProperty>(
+            Expression<Func<TInstance, TProperty>> propertyExpression
+        )
+        {
+            if (propertyExpression.Body is not MemberExpression memberExpression)
+            {
+                throw new ArgumentException(
+                    "The provided expression does not represent a property access.",
+                    nameof(propertyExpression)
+                );
+            }
+
+            if (memberExpression.Member is not PropertyInfo propertyInfo)
+            {
+                throw new ArgumentException(
+                    "The provided expression does not represent a property access.",
+                    nameof(propertyExpression)
+                );
+            }
+
+            return propertyInfo.CreatePropertySetter<TInstance, TProperty>();
+        }
     }
 
     extension(IMetaType @this)
@@ -135,6 +182,67 @@ public static class SimLynxExtensions
                 // in case a down-stream consumer uses their own shim, or the compiler includes it itself, look by name
                 attribute.AttributeType.FullName == "System.Runtime.CompilerServices.RequiredMemberAttribute"
             );
+    }
+
+    extension(PropertyInfo @this)
+    {
+        /// <summary>
+        /// Indicates whether or not this property is init-only, meaning it should only be set during object
+        /// initialization.
+        /// </summary>
+        /// <remarks>
+        /// This method only returns <c>true</c> if the property has an "init only" setter. If the setter is not
+        /// "init only" or this property <em>has no setter</em>, this method returns <c>false</c>.
+        /// <br/>
+        /// Init-only setters are a compiler feature; reflection ignores this behavior.
+        /// </remarks>
+        public bool IsInitOnly =>
+            @this.SetMethod is not null
+            && @this.SetMethod.ReturnParameter.CustomAttributes.Any(attribute =>
+                // in case a down-stream consumer uses their own shim, or the compiler includes it itself, look by name
+                attribute.AttributeType.FullName == "System.Runtime.CompilerServices.IsExternalInit"
+            );
+
+        /// <summary>
+        /// Helper to create a strongly-typed setter delegate for the property, even if the property's setter is
+        /// non-public or init-only.
+        /// </summary>
+        /// <typeparam name="TInstance">The instance type for the setter</typeparam>
+        /// <typeparam name="TProperty">The property type for the setter</typeparam>
+        /// <returns>A delegate that sets the property value on an instance of <typeparamref name="TInstance"/>.</returns>
+        /// <exception cref="ArgumentException">If the instance/property types are invalid</exception>
+        public Action<TInstance, TProperty> CreatePropertySetter<TInstance, TProperty>()
+        {
+            if (!typeof(TProperty).IsAssignableTo(@this.PropertyType))
+            {
+                throw new ArgumentException(
+                    $"Property type '{typeof(TProperty)} is not assignable to property of type '{@this.PropertyType.FullName}'.",
+                    nameof(TProperty)
+                );
+            }
+
+            if (!typeof(TInstance).IsAssignableTo(@this.DeclaringType))
+            {
+                throw new ArgumentException(
+                    $"Property '{@this.Name}' is not declared on type '{typeof(TInstance).FullName}'.",
+                    nameof(TInstance)
+                );
+            }
+
+            var setMethod =
+                @this.GetSetMethod(true)
+                ?? throw new ArgumentException(
+                    $"Property '{@this.Name}' does not have a setter nor init.",
+                    nameof(@this)
+                );
+
+            var instanceParamExpr = Expression.Parameter(typeof(TInstance), "instance");
+            var valueParamExpr = Expression.Parameter(typeof(TProperty), "value");
+            var bodyExpr = Expression.Call(instanceParamExpr, setMethod, valueParamExpr);
+            return Expression
+                .Lambda<Action<TInstance, TProperty>>(bodyExpr, instanceParamExpr, valueParamExpr)
+                .Compile();
+        }
     }
 
     extension<TLimit, TActivatorData, TRegistrationStyle>(
@@ -271,5 +379,94 @@ public static class SimLynxExtensions
             }
         }
 #endif
+    }
+
+    extension<TDelegate>(Expression<TDelegate> @this)
+        where TDelegate : Delegate
+    {
+        /// <summary>
+        /// Tries to interpret this lambda expression as a member selector and returns the corresponding
+        /// <see cref="MemberInfo"/> that was selected.
+        /// </summary>
+        /// <param name="member">The member info if the expression is a valid member selector; otherwise, null.</param>
+        /// <returns>True if the expression is a valid member selector; otherwise, false.</returns>
+        public bool TryGetSelectedMember([MaybeNullWhen(false)] out MemberInfo member)
+        {
+            if (@this.Body is not MemberExpression memberExpression)
+            {
+                member = null!;
+                return false;
+            }
+
+            member = memberExpression.Member;
+            return true;
+        }
+
+        /// <summary>
+        /// Interprets this lambda expression as a member selector and returns the corresponding
+        /// <see cref="MemberInfo"/> that was selected, throwing an exception if the expression is not a valid
+        /// member selector.
+        /// </summary>
+        /// <returns>The member info for the selected member.</returns>
+        /// <exception cref="ArgumentException">If the expression is not a valid property selector.</exception>
+        public MemberInfo GetSelectedMember()
+        {
+            if (!@this.TryGetSelectedMember(out var member))
+            {
+                throw new ArgumentException($"The given expression '{@this}' is not a valid selector.", nameof(@this));
+            }
+
+            return member;
+        }
+
+        /// <summary>
+        /// Tries to interpret this lambda expression as a property selector and returns the corresponding
+        /// <see cref="PropertyInfo"/> that was selected.
+        /// </summary>
+        /// <param name="property">The property info if the expression is a valid property selector; otherwise, null.</param>
+        /// <returns>True if the expression is a valid property selector; otherwise, false.</returns>
+        public bool TryGetProperty([MaybeNullWhen(false)] out PropertyInfo property)
+        {
+            if (!@this.TryGetSelectedMember(out var member) || member is not PropertyInfo propertyInfo)
+            {
+                property = null!;
+                return false;
+            }
+
+            property = propertyInfo;
+            return true;
+        }
+
+        /// <summary>
+        /// Interprets this lambda expression as a property selector and returns the corresponding
+        /// <see cref="PropertyInfo"/> that was selected, throwing an exception if the expression is not a valid
+        /// property selector.
+        /// </summary>
+        /// <returns>The property info for the selected property.</returns>
+        /// <exception cref="ArgumentException">If the expression is not a valid property selector.</exception>
+        public PropertyInfo GetSelectedProperty()
+        {
+            if (!@this.TryGetProperty(out var property))
+            {
+                throw new ArgumentException(
+                    $"The given expression '{@this}' is not a valid property selector.",
+                    nameof(@this)
+                );
+            }
+
+            return property;
+        }
+    }
+
+    extension(AppDomain @this)
+    {
+        /// <summary>
+        /// Enumerates all the types in all the assemblies loaded in the application domain.
+        /// </summary>
+        /// <returns>An enumerable of all types in all loaded assemblies.</returns>
+        public IEnumerable<Type> GetTypes()
+        {
+            return @this.GetAssemblies().SelectMany(assembly => assembly.GetTypes());
+        }
     }
 }

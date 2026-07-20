@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 
-namespace SimLynx.Core;
+namespace SimLynx;
 
 /// <summary>
 /// A value similar to <see cref="System.Lazy{T}"/>, but can also be reset and will invoke the factory again when
