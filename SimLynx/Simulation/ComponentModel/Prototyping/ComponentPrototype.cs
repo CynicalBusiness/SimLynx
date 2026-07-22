@@ -1,4 +1,4 @@
-using SimLynx.Core.Prototyping;
+using SimLynx.Design.Prototyping;
 
 namespace SimLynx.Simulation.ComponentModel.Prototyping;
 

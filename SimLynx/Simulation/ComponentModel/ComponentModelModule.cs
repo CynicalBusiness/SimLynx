@@ -1,5 +1,5 @@
 using Autofac;
-using SimLynx.Core.Prototyping;
+using SimLynx.Design.Prototyping;
 using SimLynx.Simulation.ComponentModel.Prototyping;
 
 namespace SimLynx.Simulation.ComponentModel;

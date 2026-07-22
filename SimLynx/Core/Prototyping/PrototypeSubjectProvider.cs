@@ -1,1 +1,0 @@
-namespace SimLynx.Core.Prototyping;

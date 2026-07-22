@@ -3,7 +3,7 @@
 Status: active WIP. This document describes the current implementation, known gaps, and the next work needed. It is
 not a finalized implementation contract.
 
-Last reviewed against the current `SimLynx/Core/Prototyping` and
+Last reviewed against the current `SimLynx/Design/Prototyping` and
 `SimLynx/Simulation/ComponentModel/Prototyping` implementations.
 
 ## Intent

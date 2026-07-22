@@ -24,7 +24,7 @@ public class ScopeTags(params object[] tags) : IEquatable<ScopeTags>
     }
 
     /// <inheritdoc/>
-    public bool Equals(ScopeTags other)
+    public bool Equals(ScopeTags? other)
     {
         return other is not null && Tags.SequenceEqual(other.Tags);
     }

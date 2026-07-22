@@ -4,7 +4,7 @@ using SimLynx.Core;
 using SimLynx.Core.Hooks;
 using SimLynx.Core.Logging;
 using SimLynx.Core.Phasing;
-using SimLynx.Core.Prototyping;
+using SimLynx.Design.Prototyping;
 using SimLynx.Design;
 using SimLynx.Discovery;
 using SimLynx.Simulation;

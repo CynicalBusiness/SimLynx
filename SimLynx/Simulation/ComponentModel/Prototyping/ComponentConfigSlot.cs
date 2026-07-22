@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
-using SimLynx.Core.Prototyping;
-using SimLynx.Core.Prototyping.Blueprints;
+using SimLynx.Design.Prototyping;
+using SimLynx.Design.Prototyping.Blueprints;
 
 namespace SimLynx.Simulation.ComponentModel.Prototyping;
 
