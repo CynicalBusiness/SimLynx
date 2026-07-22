@@ -12,7 +12,7 @@ public interface IComponentConfig<TSubject> : IPrototypeConfig<TSubject>
     /// <summary>
     /// The prototype of the component being attached.
     /// </summary>
-    public IComponentPrototype<Component> ComponentPrototype { get; }
+    public IComponentPrototype<Component>? ComponentPrototype { get; }
 }
 
 /// <summary>
@@ -25,7 +25,7 @@ public interface IComponentConfig<TSubject, TComponent> : IComponentConfig<TSubj
     where TComponent : Component
 {
     /// <inheritdoc cref="IComponentConfig{TSubject}.ComponentPrototype"/>
-    public new ComponentPrototype<TComponent> ComponentPrototype { get; }
+    public new ComponentPrototype<TComponent>? ComponentPrototype { get; }
 
-    IComponentPrototype<Component> IComponentConfig<TSubject>.ComponentPrototype => ComponentPrototype;
+    IComponentPrototype<Component>? IComponentConfig<TSubject>.ComponentPrototype => ComponentPrototype;
 }

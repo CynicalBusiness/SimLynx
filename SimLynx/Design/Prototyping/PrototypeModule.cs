@@ -47,9 +47,19 @@ public class PrototypeModule<TBaseSubject> : Module
     {
         builder.RegisterSource(new PrototypeSubjectRegistrationSource<TBaseSubject>());
 
-        builder.RegisterType<PrototypeRegistry<TBaseSubject>>().AsSelf().InstancePerDesign();
+        builder
+            .RegisterType<PrototypeRegistry<TBaseSubject>>()
+            .Named<PrototypeRegistry<TBaseSubject>>(PrototypeRegistry<TBaseSubject>.Factory.TRANSIENT_REGISTRY_NAME);
+        builder.RegisterType<PrototypeRegistry<TBaseSubject>.Factory>().AsSelf();
+
+        // singleton-ish default instances for registries and compiled catalogs
+        builder
+            .Register(c => c.Resolve<PrototypeRegistry<TBaseSubject>.Factory>().Create())
+            .AsSelf()
+            .InstancePerDesign();
         builder.Register(c => c.Resolve<PrototypeRegistry<TBaseSubject>>().Compile()).AsSelf().InstancePerSimulation();
 
+        builder.RegisterType<PrototypeResolver<TBaseSubject>>().AsSelf();
         builder
             .RegisterGeneric(PrototypeImpl)
             .Keyed(typeof(TBaseSubject), typeof(IPrototype<>))

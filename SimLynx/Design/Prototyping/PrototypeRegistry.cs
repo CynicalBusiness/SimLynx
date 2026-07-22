@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Autofac.Features.AttributeFilters;
 using SimLynx.Design.Prototyping.Blueprints;
 
 namespace SimLynx.Design.Prototyping;
@@ -166,5 +167,23 @@ public class PrototypeRegistry<TBaseSubject>(PrototypeResolver<TBaseSubject> res
     public BlueprintCatalog<TBaseSubject> Compile()
     {
         return new BlueprintCatalog<TBaseSubject>(Values.Where(p => !p.IsAbstract).Select(p => p.Compile()));
+    }
+
+    /// <summary>
+    /// Factory for creating <see cref="PrototypeRegistry{TBaseSubject}"/> instances.
+    /// </summary>
+    /// <param name="factoryFunc">The DI-provided injected factory function.</param>
+    public class Factory([KeyFilter(Factory.TRANSIENT_REGISTRY_NAME)] Func<PrototypeResolver<TBaseSubject>> factoryFunc)
+    {
+        /// <summary>
+        /// Registration name for transient prototype registries, which can be used to create more registries of the same subject type.
+        /// </summary>
+        public const string TRANSIENT_REGISTRY_NAME = "new";
+
+        /// <summary>
+        /// Creates a new <see cref="PrototypeRegistry{TBaseSubject}"/> using the provided factory function.
+        /// </summary>
+        /// <returns>The newly created <see cref="PrototypeRegistry{TBaseSubject}"/>.</returns>
+        public PrototypeRegistry<TBaseSubject> Create() => new(factoryFunc());
     }
 }
