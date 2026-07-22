@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Reflection;
 using SimLynx.Core.Prototyping.Properties;
 
@@ -148,17 +149,32 @@ public static class PrototypingExtensions
         /// starting from its immediate base prototype. If the prototype has no base, this will yield nothing.
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<IPrototype> GetAncestors()
+        public IEnumerable<IPrototype> GetAncestors(bool includeSelf = false)
         {
-            var current = @this.Base;
+            var current = includeSelf ? @this : @this.Base;
             while (current is not null)
             {
                 yield return current;
                 current = current.Base;
             }
         }
-    }
 
+        /// <summary>
+        /// Walks the prototype hierarchy downward from the root prototype, yielding all ancestor prototypes of this
+        /// prototype, optionally including itself.
+        /// </summary>
+        /// <param name="includeSelf">Whether to include the current prototype itself in the results as the last element.</param>
+        /// <returns>An enumerable of ancestor prototypes starting from the root.</returns>
+        public IEnumerable<IPrototype> GetAncestorsFromRoot(bool includeSelf = false)
+        {
+            var ancestors = @this.GetAncestors().Reverse();
+            if (includeSelf)
+            {
+                ancestors = ancestors.Append(@this);
+            }
+            return ancestors;
+        }
+    }
     extension(IPrototypeSubject @this)
     {
         /// <summary>

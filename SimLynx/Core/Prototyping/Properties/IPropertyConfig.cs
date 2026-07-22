@@ -38,6 +38,7 @@ public interface IPropertyConfig : IPrototypeConfig
     /// May differ from <see cref="HasValue"/> if the property is able to set a default.
     /// </remarks>
     public bool CanSetValue { get; }
+
 }
 
 /// <summary>

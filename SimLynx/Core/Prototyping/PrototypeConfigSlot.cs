@@ -62,7 +62,7 @@ public abstract class PrototypeConfigSlot<TSubject, TConfig>(IPrototype<TSubject
     /// the slot to configure the blueprint with any necessary information.
     /// </summary>
     /// <param name="builder">The blueprint builder to configure.</param>
-    public abstract void Configure(BlueprintBuilder<TSubject> builder);
+    public abstract void Configure(IBlueprintBuilder<TSubject> builder);
 
     /// <summary>
     /// Attempts to create a configuration for the given <paramref name="name"/> in this slot. If it cannot be created,

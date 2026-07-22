@@ -48,8 +48,8 @@ public static class PropertyConfig
     public static IPropertyConfig<TSubject> Create<TSubject>(PropertyInfo property)
         where TSubject : class, IPrototypeSubject
     {
-        var configType = typeof(PropertyConfig<,>).MakeGenericType(typeof(TSubject), property.PropertyType);
-        return (IPropertyConfig<TSubject>)Activator.CreateInstance(configType, property)!;
+        return (IPropertyConfig<TSubject>)
+            genericCreateMethod.MakeGenericMethod(typeof(TSubject), property.PropertyType).Invoke(null, [property])!;
     }
 }
 
@@ -59,7 +59,9 @@ public static class PropertyConfig
 /// <typeparam name="TSubject">The type of the subject for which this config is being applied.</typeparam>
 /// <typeparam name="TValue">The type value of the property</typeparam>
 /// <param name="property">The property info for the prototype property.</param>
-public class PropertyConfig<TSubject, TValue>(PropertyInfo property) : IPropertyConfig<TSubject>
+public class PropertyConfig<TSubject, TValue>(PropertyInfo property)
+    : IPropertyConfig<TSubject>,
+        IPropertyConfigState<TValue>
     where TSubject : class, IPrototypeSubject
 {
     private static readonly Lazy<ValueFunc?> defaultValueFunc = new(() =>
@@ -127,7 +129,7 @@ public class PropertyConfig<TSubject, TValue>(PropertyInfo property) : IProperty
     }
 
     /// <inheritdoc/>
-    public virtual bool Apply(BlueprintBuilder<TSubject> builder)
+    public virtual bool Apply(IBlueprintBuilder<TSubject> builder)
     {
         if (IsEmpty)
         {
@@ -154,7 +156,7 @@ public class PropertyConfig<TSubject, TValue>(PropertyInfo property) : IProperty
                 var assignExpr = Expression.Assign(propertyExpr, valueProviderExpr);
                 var assignAction = Expression.Lambda<Action<TSubject>>(assignExpr, subjectParamExpr).Compile();
 
-                builder.OnCreate += (context, subject) => assignAction.Invoke(subject);
+                builder.ConfigureAfterCreate((context, subject) => assignAction.Invoke(subject));
             }
 
             didSetValue = true;
@@ -170,7 +172,7 @@ public class PropertyConfig<TSubject, TValue>(PropertyInfo property) : IProperty
             var bodyExpr = Expression.Block(configExprs);
             var configAction = Expression.Lambda<Action<TSubject>>(bodyExpr, subjectParamExpr).Compile();
 
-            builder.OnCreate += (context, subject) => configAction.Invoke(subject);
+            builder.ConfigureAfterCreate((context, subject) => configAction.Invoke(subject));
             didSetValue = true;
         }
 
@@ -216,16 +218,36 @@ public class PropertyConfig<TSubject, TValue>(PropertyInfo property) : IProperty
     /// <inheritdoc cref="IPropertyConfig{TSubject}.CopyTo(IPropertyConfig{TSubject})"/>
     public void CopyTo(PropertyConfig<TSubject, TValue> other)
     {
-        if (value.HasValue)
-        {
-            other.Configure(value.Value);
-        }
-
-        configurations.ForEach(other.Configure);
+        CopyStateTo(other);
     }
 
-    void IPropertyConfig<TSubject>.CopyTo(IPropertyConfig<TSubject> other) =>
-        CopyTo((PropertyConfig<TSubject, TValue>)other);
+    private void CopyStateTo(IPropertyConfig other)
+    {
+        if (other is not IPropertyConfigState<TValue> target)
+        {
+            throw new ArgumentException(
+                $"Cannot copy property config '{Name}' with value type {typeof(TValue)} to a config with value type {other.ValueType}.",
+                nameof(other)
+            );
+        }
+
+        if (value.HasValue)
+        {
+            var valueFunc = value.Value;
+            target.SetValue(() => valueFunc());
+        }
+
+        configurations.ForEach(configuration => target.AddConfiguration(value => configuration(value)));
+    }
+
+    void IPropertyConfig<TSubject>.CopyTo(IPropertyConfig<TSubject> other) => CopyStateTo(other);
+
+    void IPropertyConfigState.CopyTo(IPropertyConfig other) => CopyStateTo(other);
+
+    void IPropertyConfigState<TValue>.SetValue(Func<TValue> value) => Configure(() => value());
+
+    void IPropertyConfigState<TValue>.AddConfiguration(Func<TValue, TValue> configuration) =>
+        Configure(value => configuration(value));
 
     private class PropertyValueParameter(PropertyInfo property, ValueFunc valueFunc) : Parameter
     {
@@ -238,7 +260,11 @@ public class PropertyConfig<TSubject, TValue>(PropertyInfo property) : IProperty
             ArgumentNullException.ThrowIfNull(pi, nameof(pi));
             ArgumentNullException.ThrowIfNull(context, nameof(context));
 
-            if (pi.Member != property)
+            if (
+                !pi.TryGetDeclaringProperty(out var prop)
+                || prop.Name != property.Name
+                || prop.PropertyType != property.PropertyType
+            )
             {
                 valueProvider = null;
                 return false;

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using SimLynx.Core.Prototyping.Blueprints;
 
@@ -42,6 +43,11 @@ public interface IPrototype
     /// The type of object this prototype is a prototype of.
     /// </summary>
     public Type SubjectType { get; }
+
+    /// <summary>
+    /// Gets an enumeration of all slots configured directly on this prototype.
+    /// </summary>
+    public IEnumerable<IPrototypeConfigSlot> Slots { get; }
 
     /// <summary>
     /// Gets a config slot on this prototype by its <paramref name="slotId"/>, if possible.

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 
 namespace SimLynx.Core;
@@ -5,7 +6,7 @@ namespace SimLynx.Core;
 /// <summary>
 /// Helper class to tag Autofac lifetime scopes with multiple tags.
 /// </summary>
-public class ScopeTags(params object[] tags)
+public class ScopeTags(params object[] tags) : IEquatable<ScopeTags>
 {
     /// <summary>
     /// Checks if the given object is one of the tags for this scope.
@@ -19,12 +20,20 @@ public class ScopeTags(params object[] tags)
     public override bool Equals(object? obj)
     {
         // ? Autofac uses ".Contains" to check scope matches, which should invoke this method
-        return base.Equals(obj) || tags.Contains(obj);
+        return base.Equals(obj) || Tags.Contains(obj);
     }
+
+    /// <inheritdoc/>
+    public bool Equals(ScopeTags other)
+    {
+        return other is not null && Tags.SequenceEqual(other.Tags);
+    }
+
+    private object[] Tags { get; } = tags;
 
     /// <inheritdoc/>
     public override int GetHashCode()
     {
-        return tags.GetHashCode();
+        return Tags.GetHashCode();
     }
 }

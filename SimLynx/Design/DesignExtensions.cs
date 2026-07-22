@@ -1,4 +1,5 @@
 using Autofac.Builder;
+using SimLynx.Core.Phasing;
 
 namespace SimLynx.Design;
 
@@ -17,7 +18,7 @@ public static class DesignExtensions
         /// <returns>A registration builder to further configure the component.</returns>
         public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> InstancePerDesign()
         {
-            return builder.InstancePerOwned<DesignPhase>();
+            return builder.InstancePerPhase(typeof(DesignPhase));
         }
     }
 }

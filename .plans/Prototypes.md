@@ -28,9 +28,6 @@ The implementation has an explicit phase split:
 - `Extends`, `GetAncestors`, and `IPrototypeSubject.IsOf(...)` traverse the direct base chain at runtime.
 - `IPrototypeSubject.Prototype` is excluded from property configuration with `[Configurable(false)]`.
 
-There is no cycle detection. A cycle can therefore make ancestry traversal or inherited config compilation loop
-forever. Abstract prototypes are marked but are not currently rejected by `Compile()`.
-
 ### Config slots
 
 - Configuration is organized into `IPrototypeConfigSlot` instances instead of the previous
@@ -39,7 +36,8 @@ forever. Abstract prototypes are marked but are not currently rejected by `Compi
   `BlueprintBuilder<TSubject>` during compilation.
 - `PrototypeConfigSlotResolver<TSubject>` resolves slots through Autofac by slot ID or supported config type.
 - `PrototypeConfigModule` registers an open-generic slot under its ID and config-type aliases.
-- A prototype only compiles slots that have already been resolved and added to its local slot dictionary.
+- Compilation uses the nearest resolved slot for each slot ID across the prototype hierarchy, so inherited-only slots
+  participate without requiring a getter call on the derived prototype.
 
 The first complete slot is `Properties`. A `Components` slot has also been introduced, but its compilation and config
 behavior are still stubs.
@@ -54,12 +52,9 @@ behavior are still stubs.
 - Expression-based `GetProperty`/`TryGetProperty` helpers provide typed code-first access.
 - During blueprint compilation, non-required values become post-create assignment delegates. Required values are
   supplied to Autofac through a property-specific parameter. Modifier delegates run after construction.
-- `PropertyConfigSlot` attempts to flatten inherited configs from oldest ancestor to newest by copying them into
+- `PropertyConfigSlot` flattens inherited configs from oldest ancestor to the current prototype by copying them into
   stabilized effective configs stored on the blueprint builder.
-
-Known correctness gap: `PropertyConfigSlot.GetEffectiveConfigs(...)` currently enumerates ancestors but not the
-prototype being compiled. Consequently, a prototype's own property configs are not applied to its own blueprint. The
-merge also depends on a corresponding slot having been resolved locally before `Prototype<TSubject>.Compile()` runs.
+- Property configs are merged across compatible base and derived CLR subject types, including inherited-only slots.
 
 ### Registry and construction
 
@@ -78,8 +73,8 @@ graph-wide validation before constructing the catalog.
 
 ### Blueprints and catalog
 
-- `Prototype<TSubject>.Compile()` creates a `BlueprintBuilder<TSubject>`, lets each resolved local slot configure it,
-  and builds an immutable `Blueprint<TSubject>`.
+- `Prototype<TSubject>.Compile()` creates a `BlueprintBuilder<TSubject>`, lets each effective local or inherited slot
+  configure it, and builds an immutable `Blueprint<TSubject>`.
 - `BlueprintBuilder<TSubject>` collects Autofac injection parameters, shared typed options, and pre-/post-create
   handlers.
 - `Blueprint<TSubject>` snapshots those inputs. Each `CreateInstance(...)` clones the instance options, gathers dynamic
@@ -119,36 +114,36 @@ The current code-first model does not yet provide the loader/UGC concerns from t
 
 ## Next Implementation Steps
 
-1. Correct and test property-slot compilation:
-   - include the current prototype's configs after its ancestors;
-   - ensure inherited-only slots participate even when the derived prototype did not resolve that slot locally;
-   - verify base-to-derived set/configure/clear ordering;
-   - verify required, nullable, value-type, default-constructible, and non-public-setter behavior.
-2. Add prototype-graph validation before registry compilation:
-   - reject inheritance cycles;
-   - validate subject-type compatibility across the full chain;
-   - define and enforce abstract prototype compilation/instantiation rules;
-   - report errors with prototype IDs and the relevant chain.
-3. Define the compilation contract:
-   - specify which state is snapshotted and which references may remain live;
-   - make slot discovery deterministic and independent of which code-first getters happened to run;
-   - define duplicate slot/config registration behavior;
-   - prevent mutation from changing already compiled blueprints.
-4. Complete component config behavior:
-   - construct and expose nested component prototypes;
-   - compile attachment behavior into parent blueprints;
-   - define names, inheritance, removal, replacement, and duplicate-component rules;
-   - integrate component build context and instance state.
-5. Add focused registry and lifecycle tests:
-   - creation, compatible reuse, duplicate IDs, base lookup, and `OnPrototypeAdded`;
-   - Design-to-Simulation catalog creation;
-   - catalog lookup and subject creation through Autofac;
-   - abstract and failure cases.
-6. Add loader-facing design data only after the code-first compile semantics stabilize:
-   - source-aware patches and deterministic ordering;
-   - deferred ID resolution;
-   - diagnostics suitable for content authors;
-   - file formats and loaders.
+1. [x] Correct and test property-slot compilation:
+    - include the current prototype's configs after its ancestors;
+    - ensure inherited-only slots participate even when the derived prototype did not resolve that slot locally;
+    - verify base-to-derived set/configure/clear ordering;
+    - verify required, nullable, value-type, default-constructible, and non-public-setter behavior.
+2. [x] Add prototype-graph validation before registry compilation:
+    - reject inheritance cycles;
+    - validate subject-type compatibility across the full chain;
+    - define and enforce abstract prototype compilation/instantiation rules;
+    - report errors with prototype IDs and the relevant chain.
+3. [ ] Define the compilation contract:
+    - specify which state is snapshotted and which references may remain live;
+    - make slot discovery deterministic and independent of which code-first getters happened to run;
+    - define duplicate slot/config registration behavior;
+    - prevent mutation from changing already compiled blueprints.
+4. [ ] Add focused registry and lifecycle tests:
+    - creation, compatible reuse, duplicate IDs, base lookup, and `OnPrototypeAdded`;
+    - Design-to-Simulation catalog creation;
+    - catalog lookup and subject creation through Autofac;
+    - abstract and failure cases.
+5. [ ] Complete component config behavior:
+    - construct and expose nested component prototypes;
+    - compile attachment behavior into parent blueprints;
+    - define names, inheritance, removal, replacement, and duplicate-component rules;
+    - integrate component build context and instance state.
+6. [ ] Add loader-facing design data only after the code-first compile semantics stabilize:
+    - source-aware patches and deterministic ordering;
+    - deferred ID resolution;
+    - diagnostics suitable for content authors;
+    - file formats and loaders.
 
 ## Open Questions
 

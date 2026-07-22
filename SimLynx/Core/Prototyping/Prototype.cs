@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using SimLynx.Core.Prototyping.Blueprints;
 
 namespace SimLynx.Core.Prototyping;
@@ -21,6 +22,8 @@ public class Prototype<TSubject>(Symbol id, PrototypeContext<TSubject> context) 
     /// </summary>
     protected Dictionary<Symbol, IPrototypeConfigSlot<TSubject, IPrototypeConfig>> Slots { get; } = [];
 
+    IEnumerable<IPrototypeConfigSlot> IPrototype.Slots => Slots.Values;
+
     /// <inheritdoc/>
     public Symbol Id { get; } = id;
 
@@ -30,6 +33,10 @@ public class Prototype<TSubject>(Symbol id, PrototypeContext<TSubject> context) 
         get => field;
         init
         {
+            // this check can be fairly simple since we can make a few assumptions about the base prototype:
+            // - has already validated its own base prototype, if any
+            // - is init-only and should not be able to cycle (baring reflection shenanigans, which we don't need to defend against)
+
             if (value is not null && !value.SubjectType.IsAssignableFrom(SubjectType))
             {
                 throw new ArgumentException(
@@ -69,14 +76,32 @@ public class Prototype<TSubject>(Symbol id, PrototypeContext<TSubject> context) 
     /// <inheritdoc/>
     public IBlueprint<TSubject> Compile()
     {
+        if (IsAbstract)
+        {
+            throw new InvalidOperationException($"Cannot compile an abstract prototype: {this}");
+        }
+
         var builder = new BlueprintBuilder<TSubject>(this);
 
-        foreach (var slot in Slots.Values)
+        var slots = GetAllSlots().ToArray();
+        foreach (var slot in slots)
         {
             slot.Configure(builder);
         }
 
         return builder.Build();
+    }
+
+    /// <summary>
+    /// Gets an effective enumeration of config slots for this prototype, including inherited slots.
+    /// </summary>
+    /// <returns>An enumerable of effective config slots for this prototype.</returns>
+    protected virtual IEnumerable<IPrototypeConfigSlotFor<TSubject>> GetAllSlots()
+    {
+        return this.GetAncestors(includeSelf: true)
+            .SelectMany(prototype => prototype.Slots)
+            .Cast<IPrototypeConfigSlotFor<TSubject>>()
+            .Distinct(PrototypeConfigSlotIdComparer<IPrototypeConfigSlotFor<TSubject>>.Default);
     }
 
     /// <inheritdoc cref="IPrototype.TryGetSlot"/>

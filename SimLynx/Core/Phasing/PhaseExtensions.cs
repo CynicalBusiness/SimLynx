@@ -41,7 +41,9 @@ public static class PhaseExtensions
         /// <returns>The registration builder for chaining.</returns>
         public IRegistrationBuilder<TLimit, TData, TStyle> InstancePerPhase(Type phaseType)
         {
-            return @this.InstancePerOwned(phaseType);
+            var reg = @this.InstancePerLifetimeScope();
+            reg.RegistrationData.Lifetime = new PhaseTypeScopeLifetime(phaseType);
+            return reg;
         }
 
         /// <summary>
@@ -51,7 +53,9 @@ public static class PhaseExtensions
         /// <returns>The registration builder for chaining.</returns>
         public IRegistrationBuilder<TLimit, TData, TStyle> InstancePerPhase(string phaseId)
         {
-            return @this.InstancePerMatchingLifetimeScope(Phase.PHASE_SCOPE_TAG_PREFIX + phaseId);
+            var reg = @this.InstancePerMatchingLifetimeScope(phaseId);
+            reg.RegistrationData.Lifetime = new PhaseIdScopeLifetime(phaseId);
+            return reg;
         }
     }
 

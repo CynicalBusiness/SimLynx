@@ -15,13 +15,16 @@ public class ComponentConfig<TSubject, TComponent>(IComponentPrototype<TSubject>
     /// <inheritdoc/>
     public bool IsEmpty => throw new System.NotImplementedException();
 
+    /// <inheritdoc/>
     public ComponentPrototype<TComponent> ComponentPrototype => throw new System.NotImplementedException();
 
-    public bool Apply(BlueprintBuilder<TSubject> builder)
+    /// <inheritdoc/>
+    public bool Apply(IBlueprintBuilder<TSubject> builder)
     {
         throw new System.NotImplementedException();
     }
 
+    /// <inheritdoc/>
     public bool Clear()
     {
         throw new System.NotImplementedException();

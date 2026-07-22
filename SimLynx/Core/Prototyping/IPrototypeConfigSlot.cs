@@ -37,7 +37,7 @@ public interface IPrototypeConfigSlot
 /// </summary>
 /// <typeparam name="TSubject">The type of the prototype subject.</typeparam>
 /// <typeparam name="TConfig">The type of configuration this slot accepts.</typeparam>
-public interface IPrototypeConfigSlot<TSubject, out TConfig>
+public interface IPrototypeConfigSlot<in TSubject, out TConfig>
     : IPrototypeConfigSlotFor<TSubject>,
         IPrototypeConfigSlotOf<TConfig>
     where TConfig : IPrototypeConfig

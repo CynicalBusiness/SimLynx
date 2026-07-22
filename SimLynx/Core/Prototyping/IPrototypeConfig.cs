@@ -37,5 +37,5 @@ public interface IPrototypeConfig<TSubject> : IPrototypeConfig
     /// <param name="builder">The blueprint builder to which this configuration should be applied.</param>
     /// <returns>True if the configuration was applied, false if none was done/needed.</returns>
     [EditorBrowsable(EditorBrowsableState.Advanced)]
-    public bool Apply(BlueprintBuilder<TSubject> builder);
+    public bool Apply(IBlueprintBuilder<TSubject> builder);
 }

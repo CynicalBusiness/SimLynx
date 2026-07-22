@@ -11,7 +11,7 @@ namespace SimLynx.Core.Prototyping;
 /// Registry of prototypes.
 /// </summary>
 /// <typeparam name="TBaseSubject">The base type of the subject for which this registry is storing prototypes.</typeparam>
-public class PrototypeRegistry<TBaseSubject>(PrototypeResolver resolver)
+public class PrototypeRegistry<TBaseSubject>(PrototypeResolver<TBaseSubject> resolver)
     : IReadOnlyDictionary<Symbol, IPrototype<TBaseSubject>>
     where TBaseSubject : class, IPrototypeSubject
 {
@@ -146,7 +146,7 @@ public class PrototypeRegistry<TBaseSubject>(PrototypeResolver resolver)
 
         try
         {
-            var prototype = resolver.Resolve<TSubject>(isAbstract, basePrototype);
+            var prototype = resolver.Resolve<TSubject>(id, isAbstract, basePrototype);
 
             _prototypes[id] = prototype;
             OnPrototypeAdded?.Invoke(prototype);
@@ -165,6 +165,6 @@ public class PrototypeRegistry<TBaseSubject>(PrototypeResolver resolver)
     /// <returns>The catalog of compiled blueprints.</returns>
     public BlueprintCatalog<TBaseSubject> Compile()
     {
-        return new BlueprintCatalog<TBaseSubject>(Values.Select(p => p.Compile()));
+        return new BlueprintCatalog<TBaseSubject>(Values.Where(p => !p.IsAbstract).Select(p => p.Compile()));
     }
 }

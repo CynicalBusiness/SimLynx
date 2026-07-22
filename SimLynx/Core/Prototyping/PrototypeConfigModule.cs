@@ -1,7 +1,7 @@
 using System;
+using System.Linq;
 using Autofac;
 using Autofac.Builder;
-using SimLynx.Design;
 
 namespace SimLynx.Core.Prototyping;
 
@@ -10,6 +10,23 @@ namespace SimLynx.Core.Prototyping;
 /// </summary>
 public class PrototypeConfigModule : Module
 {
+    private static void RegisterConfigType(
+        IRegistrationBuilder<object, ReflectionActivatorData, DynamicRegistrationStyle> registration,
+        Type configType
+    )
+    {
+        if (!configType.IsSubclassOfGenericDefinition(typeof(IPrototypeConfigSlotFor<>), typeof(IPrototypeConfigSlot)))
+            if (configType.IsGenericType && !configType.IsGenericTypeDefinition)
+            {
+                registration = registration.Keyed(
+                    configType.GetGenericTypeDefinition(),
+                    typeof(IPrototypeConfigSlotFor<>)
+                );
+            }
+
+        registration.Keyed(configType, typeof(IPrototypeConfigSlotFor<>));
+    }
+
     /// <summary>
     /// Creates a new module to register a prototype config slot of the given <paramref name="configSlotType"/>
     /// and <paramref name="slotId"/>.
@@ -31,8 +48,10 @@ public class PrototypeConfigModule : Module
 
         if (
             !configSlotType.IsGenericTypeDefinition
-            || !configSlotType.IsAssignableTo(typeof(IPrototypeConfigSlotFor<>))
-            || configSlotType.GenericTypeArguments.Length != 1
+            || !configSlotType
+                .GetInterfaces()
+                .Any(type => type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IPrototypeConfigSlotFor<>))
+            || configSlotType.GetGenericArguments().Length != 1
         )
         {
             throw new ArgumentException(
@@ -71,28 +90,11 @@ public class PrototypeConfigModule : Module
             .RegisterGeneric(ConfigSlotType)
             .Keyed(SlotId, typeof(IPrototypeConfigSlotFor<>))
             .WithParameter(new TypedParameter(typeof(Symbol), SlotId))
-            .InstancePerDesign();
+            .InstancePerDependency();
 
         foreach (var configType in ConfigTypes)
         {
             RegisterConfigType(registration, configType);
         }
-    }
-
-    private void RegisterConfigType(
-        IRegistrationBuilder<object, ReflectionActivatorData, DynamicRegistrationStyle> registration,
-        Type configType
-    )
-    {
-        if (!configType.IsSubclassOfGenericDefinition(typeof(IPrototypeConfigSlotFor<>), typeof(IPrototypeConfigSlot)))
-            if (configType.IsGenericType && !configType.IsGenericTypeDefinition)
-            {
-                registration = registration.Keyed(
-                    configType.GetGenericTypeDefinition(),
-                    typeof(IPrototypeConfigSlotFor<>)
-                );
-            }
-
-        registration.Keyed(configType, typeof(IPrototypeConfigSlotFor<>));
     }
 }

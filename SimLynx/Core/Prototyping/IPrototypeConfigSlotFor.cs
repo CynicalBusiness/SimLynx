@@ -6,7 +6,7 @@ namespace SimLynx.Core.Prototyping;
 /// A slot for prototype configurations on a <typeparamref name="TSubject"/> prototype.
 /// </summary>
 /// <typeparam name="TSubject">The type of the prototype subject.</typeparam>
-public interface IPrototypeConfigSlotFor<TSubject> : IPrototypeConfigSlot
+public interface IPrototypeConfigSlotFor<in TSubject> : IPrototypeConfigSlot
     where TSubject : class, IPrototypeSubject
 {
     /// <summary>
@@ -14,5 +14,5 @@ public interface IPrototypeConfigSlotFor<TSubject> : IPrototypeConfigSlot
     /// the slot to configure the blueprint with any necessary information.
     /// </summary>
     /// <param name="builder">The blueprint builder to configure.</param>
-    public void Configure(BlueprintBuilder<TSubject> builder);
+    public void Configure(IBlueprintBuilder<TSubject> builder);
 }

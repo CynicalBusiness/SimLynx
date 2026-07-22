@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using SimLynx.Core.Prototyping.Blueprints;
@@ -25,7 +24,7 @@ public class PropertyConfigSlot<TSubject>(IPrototype<TSubject> prototype, Symbol
     where TSubject : class, IPrototypeSubject
 {
     /// <inheritdoc/>
-    public override void Configure(BlueprintBuilder<TSubject> builder)
+    public override void Configure(IBlueprintBuilder<TSubject> builder)
     {
         var effectiveConfigs = GetEffectiveConfigs(builder);
 
@@ -45,12 +44,7 @@ public class PropertyConfigSlot<TSubject>(IPrototype<TSubject> prototype, Symbol
             return null;
         }
 
-        return (IPropertyConfig<TSubject>)
-            Activator.CreateInstance(
-                typeof(PropertyConfig<,>).MakeGenericType(typeof(TSubject), property.PropertyType),
-                this,
-                property
-            )!;
+        return PropertyConfig.Create<TSubject>(property);
     }
 
     /// <summary>
@@ -66,25 +60,32 @@ public class PropertyConfigSlot<TSubject>(IPrototype<TSubject> prototype, Symbol
     /// </remarks>
     /// <returns>A dictionary of effective property configs, keyed by property name.</returns>
     protected virtual Dictionary<string, IPropertyConfig<TSubject>> GetEffectiveConfigs(
-        BlueprintBuilder<TSubject> builder
+        IBlueprintBuilder<TSubject> builder
     )
     {
-        if (builder.Options.GetOrAdd<Dictionary<string, IPropertyConfig<TSubject>>>(out var effectiveConfigs))
+        builder.Options.GetOrAdd<Dictionary<string, IPropertyConfig<TSubject>>>(out var effectiveConfigs);
+
+        var allConfigs = Prototype
+            .GetAncestorsFromRoot(includeSelf: true)
+            .SelectMany(prototype => prototype[Id]?.GetOwn() ?? [])
+            .OfType<IPropertyConfig>();
+
+        foreach (var config in allConfigs)
         {
-            var allConfigs = Prototype
-                .GetAncestors()
-                .Reverse()
-                .Select(p => p.GetSlot(Id) as PropertyConfigSlot<TSubject>)
-                .SelectMany(s => s?.GetOwn() ?? []);
-
-            foreach (var config in allConfigs)
+            if (!effectiveConfigs.TryGetValue(config.Name, out var effectiveConfig))
             {
-                if (!effectiveConfigs.TryGetValue(config.Name, out var effectiveConfig))
-                {
-                    effectiveConfigs[config.Name] = effectiveConfig = PropertyConfig.Create<TSubject>(config.Property);
-                }
+                // var typeInfo = PrototypePropertyTypeInfo.For<TSubject>();
+                // if (!typeInfo.TryGetProperty(config.Name, out var property))
+                // {
+                //     continue;
+                // }
 
-                config.CopyTo(effectiveConfig);
+                effectiveConfigs[config.Name] = effectiveConfig = PropertyConfig.Create<TSubject>(config.Property);
+            }
+
+            if (config is IPropertyConfigState configState)
+            {
+                configState.CopyTo(effectiveConfig);
             }
         }
 

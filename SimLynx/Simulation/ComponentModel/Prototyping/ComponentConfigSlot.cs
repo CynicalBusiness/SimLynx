@@ -85,7 +85,7 @@ public class ComponentConfigSlot<TSubject>(Symbol slotId, IComponentPrototype<TS
     )!;
 
     /// <inheritdoc/>
-    public override void Configure(BlueprintBuilder<TSubject> builder)
+    public override void Configure(IBlueprintBuilder<TSubject> builder)
     {
         // TODO
         throw new System.NotImplementedException();

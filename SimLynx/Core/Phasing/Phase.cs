@@ -3,7 +3,6 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
-using Autofac.Core;
 using SimLynx.Core.Hooks;
 
 namespace SimLynx.Core.Phasing;
@@ -24,10 +23,22 @@ public abstract class Phase : IPhase
     /// <param name="phaseType">The type of the phase.</param>
     /// <param name="phaseId">The ID of the phase.</param>
     /// <returns>The tag for the lifetime scope associated with the phase type.</returns>
-    public static ScopeTags GetLifetimeScopeTag(Type phaseType, string phaseId)
+    public static PhaseScopeTag GetLifetimeScopeTag(Type phaseType, string phaseId)
     {
         ArgumentNullException.ThrowIfNull(phaseType);
-        return new ScopeTags(new TypedService(phaseType), PHASE_SCOPE_TAG_PREFIX + phaseId);
+        return new PhaseScopeTag(phaseType, phaseId);
+    }
+
+    /// <summary>
+    /// Gets the tag for lifetime scopes associated with the given <typeparamref name="TPhase"/>.
+    /// </summary>
+    /// <typeparam name="TPhase">The type of the phase.</typeparam>
+    /// <param name="phaseId">The ID of the phase.</param>
+    /// <returns>The tag for the lifetime scope associated with the phase type.</returns>
+    public static PhaseScopeTag GetLifetimeScopeTag<TPhase>(string phaseId)
+        where TPhase : Phase
+    {
+        return GetLifetimeScopeTag(typeof(TPhase), phaseId);
     }
 
     private static readonly MethodInfo InvokeRunHookMethod = typeof(Phase).GetMethod(

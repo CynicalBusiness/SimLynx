@@ -304,6 +304,35 @@ public static class SimLynxExtensions
         }
     }
 
+    extension(ParameterInfo @this)
+    {
+        /// <summary>
+        /// Maps from a property-set-value parameter to the declaring property.
+        /// </summary>
+        /// <remarks>
+        /// This method is copied from Autofac's internal helper by the same name.
+        /// </remarks>
+        /// <param name="prop">The property info on which the setter is specified.</param>
+        /// <returns>True if the parameter is a property setter.</returns>
+        public bool TryGetDeclaringProperty([NotNullWhen(returnValue: true)] out PropertyInfo? prop)
+        {
+            var mi = @this.Member as MethodInfo;
+            if (
+                mi is not null
+                && mi.IsSpecialName
+                && mi.Name.StartsWith("set_", StringComparison.Ordinal)
+                && mi.DeclaringType is not null
+            )
+            {
+                prop = mi.DeclaringType.GetDeclaredProperty(mi.Name[4..]);
+                return true;
+            }
+
+            prop = null;
+            return false;
+        }
+    }
+
     extension(ArgumentException)
     {
 #if !NET6_0_OR_GREATER
