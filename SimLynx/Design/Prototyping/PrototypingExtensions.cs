@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
+using Autofac;
+using Autofac.Core.Registration;
 using SimLynx.Design.Prototyping.Properties;
 
 namespace SimLynx.Design.Prototyping;
@@ -175,6 +177,7 @@ public static class PrototypingExtensions
             return ancestors;
         }
     }
+
     extension(IPrototypeSubject @this)
     {
         /// <summary>
@@ -185,6 +188,19 @@ public static class PrototypingExtensions
         public bool IsOf(IPrototype prototype)
         {
             return @this.Prototype.Extends(prototype);
+        }
+    }
+
+    extension(ContainerBuilder @this)
+    {
+        /// <summary>
+        /// Registers a prototype configuration slot type with the given <paramref name="def"/> in the container.
+        /// </summary>
+        /// <param name="def">The prototype config slot definition to register.</param>
+        /// <returns>The module registrar for the registered module.</returns>
+        public IModuleRegistrar RegisterPrototypeConfigSlot(PrototypeConfigSlotDef def)
+        {
+            return @this.RegisterModule(new PrototypeConfigModule(def));
         }
     }
 }

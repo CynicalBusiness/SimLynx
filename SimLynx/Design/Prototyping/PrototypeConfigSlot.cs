@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Autofac;
 using SimLynx.Design.Prototyping.Blueprints;
 
 namespace SimLynx.Design.Prototyping;
@@ -9,8 +10,7 @@ namespace SimLynx.Design.Prototyping;
 /// <typeparam name="TSubject">The concrete subject type being configured.</typeparam>
 /// <typeparam name="TConfig">The type of configuration this slot accepts.</typeparam>
 /// <param name="prototype">The prototype that owns this config slot.</param>
-/// <param name="slotId">The ID of the config slot.</param>
-public abstract class PrototypeConfigSlot<TSubject, TConfig>(IPrototype<TSubject> prototype, Symbol slotId)
+public abstract class PrototypeConfigSlot<TSubject, TConfig>(IPrototype<TSubject> prototype)
     : IPrototypeConfigSlot<TSubject, TConfig>
     where TSubject : class, IPrototypeSubject
     where TConfig : class, IPrototypeConfig<TSubject>
@@ -26,7 +26,8 @@ public abstract class PrototypeConfigSlot<TSubject, TConfig>(IPrototype<TSubject
     protected Dictionary<string, TConfig> Configs { get; } = [];
 
     /// <inheritdoc/>
-    public Symbol Id { get; } = slotId;
+    [ServiceKey]
+    public required Symbol Id { get; init; }
 
     /// <inheritdoc/>
     public virtual TConfig? this[string name]

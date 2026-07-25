@@ -9,21 +9,26 @@ namespace SimLynx.Core;
 public class PriorityComparer : IComparer<sbyte>
 {
     /// <summary>
-    /// A static instance of this comparer.
+    /// The default instance of this comparer. Alias for <see cref="Descending"/>, which sorts in descending order.
     /// </summary>
-    public static readonly PriorityComparer Default = new();
+    public static PriorityComparer Default => Descending;
 
     /// <summary>
-    /// A static instance of this comparer with the order inverted, so that lower priorities are first.
+    /// A static instance of this comparer which sorts in descending order, so that higher priorities are first.
     /// </summary>
-    public static readonly PriorityComparer Inverted = new() { IsInverted = true };
+    public static PriorityComparer Descending { get; } = new();
+
+    /// <summary>
+    /// A static instance of this comparer which sorts in ascending order, so that lower priorities are first.
+    /// </summary>
+    public static PriorityComparer Ascending { get; } = new() { IsInverted = true };
 
     /// <summary>
     /// Constructs a new priority comparer.
     /// </summary>
     /// <remarks>
     /// This constructor is protected to prevent external instantiation, as this class is intended to be used via the
-    /// static instances <see cref="Default"/> and <see cref="Inverted"/>, but may still be inherited from.
+    /// static instances <see cref="Default"/> and <see cref="Ascending"/>, but may still be inherited from.
     /// </remarks>
     protected PriorityComparer() { }
 

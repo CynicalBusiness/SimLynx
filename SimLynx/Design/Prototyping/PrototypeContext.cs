@@ -4,6 +4,6 @@ namespace SimLynx.Design.Prototyping;
 /// Context for a prototype.
 /// </summary>
 /// <typeparam name="TSubject">The concrete subject type of the prototype.</typeparam>
-/// <param name="ConfigSlotResolverFactory">Factory for creating a <see cref="PrototypeConfigSlotResolver{TSubject}"/> instance.</param>
-public record PrototypeContext<TSubject>(PrototypeConfigSlotResolver<TSubject>.Factory ConfigSlotResolverFactory)
+/// <param name="ConfigSlotCatalog">The catalog of configuration slots available for the prototype.</param>
+public record PrototypeContext<TSubject>(PrototypeConfigSlotCatalog ConfigSlotCatalog)
     where TSubject : class, IPrototypeSubject;

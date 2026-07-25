@@ -20,22 +20,22 @@ public static class Priorities
     /// <summary>
     /// The default "normal" priority level.
     /// </summary>
-    public const sbyte Default = default;
+    public const sbyte Default = 0;
 
     /// <summary>
     /// A high priority level, above the default.
     /// </summary>
-    public const sbyte High = 0b0000_0001;
+    public const sbyte High = 0b000_0001;
 
     /// <summary>
     /// A higher priority level, above <see cref="High"/>.
     /// </summary>
-    public const sbyte Higher = 0b0000_1000;
+    public const sbyte Higher = 0b000_1000;
 
     /// <summary>
     /// A very high priority level, above <see cref="Higher"/>.
     /// </summary>
-    public const sbyte VeryHigh = 0b0100_0000;
+    public const sbyte VeryHigh = 0b100_0000;
 
     /// <summary>
     /// A low priority level, below the default.

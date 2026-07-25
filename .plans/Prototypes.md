@@ -34,8 +34,21 @@ The implementation has an explicit phase split:
   provider/resolver/compiler services.
 - `PrototypeConfigSlot<TSubject, TConfig>` stores named configs, creates them lazily, and configures a
   `BlueprintBuilder<TSubject>` during compilation.
-- `PrototypeConfigSlotResolver<TSubject>` resolves slots through Autofac by slot ID or supported config type.
-- `PrototypeConfigModule` registers an open-generic slot under its ID and config-type aliases.
+- `PrototypeConfigSlotCatalog` snapshots slot definitions in Autofac registration order and resolves slot instances
+  through Autofac by their unique slot ID or declared config-type aliases.
+- `PrototypeConfigModule` registers an open-generic slot under its unique ID and adds its definition to the catalog.
+- Slot configuration order is deterministic: definitions are stable-sorted by descending priority, so equal-priority
+  slots retain Autofac registration order. The catalog records both this sort index and the original registration
+  index.
+- Slot IDs are unique. Duplicate IDs fail catalog construction rather than silently overriding an earlier
+  registration.
+- Config-type aliases are intentionally non-unique. Alias lookup ignores slot priority and tries the latest
+  registration first, falling back to earlier registrations that support the prototype. An exact closed-generic alias
+  is more specific and is tried before an alias for its open-generic type definition.
+- Autofac determines whether an open-generic slot can be closed for a subject type. An incompatible generic constraint
+  is treated as an unavailable registration by `TryResolveService`; activation and registration failures are not
+  interpreted as unsupported slots and propagate to the caller. `IPrototypeConfigSlot.IsSupported` handles only
+  contextual applicability after successful construction.
 - Compilation uses the nearest resolved slot for each slot ID across the prototype hierarchy, so inherited-only slots
   participate without requiring a getter call on the derived prototype.
 
@@ -125,15 +138,15 @@ The current code-first model does not yet provide the loader/UGC concerns from t
     - define and enforce abstract prototype compilation/instantiation rules;
     - report errors with prototype IDs and the relevant chain.
 3. [ ] Define the compilation contract:
-    - specify which state is snapshotted and which references may remain live;
-    - make slot discovery deterministic and independent of which code-first getters happened to run;
-    - define duplicate slot/config registration behavior;
-    - prevent mutation from changing already compiled blueprints.
+    - [ ] specify which state is snapshotted and which references may remain live;
+    - [x] make slot discovery deterministic and independent of which code-first getters happened to run;
+    - [x] define duplicate slot/config registration behavior;
+    - [ ] prevent mutation from changing already compiled blueprints.
 4. [ ] Add focused registry and lifecycle tests:
-    - creation, compatible reuse, duplicate IDs, base lookup, and `OnPrototypeAdded`;
-    - Design-to-Simulation catalog creation;
-    - catalog lookup and subject creation through Autofac;
-    - abstract and failure cases.
+    - [ ] creation, compatible reuse, duplicate IDs, base lookup, and `OnPrototypeAdded`;
+    - [ ] Design-to-Simulation catalog creation;
+    - [ ] catalog lookup and subject creation through Autofac;
+    - [ ] abstract and failure cases.
 5. [ ] Complete component config behavior:
     - construct and expose nested component prototypes;
     - compile attachment behavior into parent blueprints;

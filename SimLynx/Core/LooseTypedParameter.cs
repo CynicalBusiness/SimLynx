@@ -21,7 +21,7 @@ public class LooseTypedParameter : ConstantParameter
         }
         else if (ceilingType.IsGenericTypeDefinition)
         {
-            return pi => pi.ParameterType.IsSubclassOfGenericDefinition(ceilingType) && valuePredicate(pi);
+            return pi => pi.ParameterType.IsGenericTypeOf(ceilingType) && valuePredicate(pi);
         }
         else
         {
@@ -33,11 +33,11 @@ public class LooseTypedParameter : ConstantParameter
     /// Initializes a new instance of the <see cref="LooseTypedParameter"/> class with the specified value, value type,
     /// and optional ceiling type.
     /// </summary>
-    /// <param name="value">The value to provide for the parameter.</param>
     /// <param name="valueType">The type of the value.</param>
+    /// <param name="value">The value to provide for the parameter.</param>
     /// <param name="ceilingType">The ceiling type to match against. The parameter will only match if it is also assignable to this type.</param>
     /// <exception cref="ArgumentException">If <paramref name="value"/>'s type is not assignable to <paramref name="valueType"/> or if <paramref name="valueType"/> is not assignable to <paramref name="ceilingType"/>.</exception>
-    public LooseTypedParameter(object? value, Type valueType, Type? ceilingType = null)
+    public LooseTypedParameter(Type valueType, object? value, Type? ceilingType = null)
         : base(value, CreatePredicate(valueType, ceilingType))
     {
         if (value is not null && !value.GetType().IsAssignableTo(valueType))
@@ -65,5 +65,5 @@ public class LooseTypedParameter : ConstantParameter
     /// <param name="ceilingType">The ceiling type to match against. The parameter will only match if it is also assignable to this type.</param>
     /// <exception cref="ArgumentNullException">If <paramref name="value"/> is <c>null</c>.</exception>
     public LooseTypedParameter(object value, Type? ceilingType = null)
-        : this(value, value is null ? throw new ArgumentNullException(nameof(value)) : value.GetType(), ceilingType) { }
+        : this(value is null ? throw new ArgumentNullException(nameof(value)) : value.GetType(), value, ceilingType) { }
 }

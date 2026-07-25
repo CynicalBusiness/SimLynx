@@ -19,8 +19,8 @@ public static class PropertyConfigSlot
 /// Config slot for property configs, which configure properties of a subject type via reflection.
 /// </summary>
 /// <inheritdoc cref="PrototypeConfigSlot{TSubject, TConfig}"/>
-public class PropertyConfigSlot<TSubject>(IPrototype<TSubject> prototype, Symbol slotId)
-    : PrototypeConfigSlot<TSubject, IPropertyConfig<TSubject>>(prototype, slotId)
+public class PropertyConfigSlot<TSubject>(IPrototype<TSubject> prototype)
+    : PrototypeConfigSlot<TSubject, IPropertyConfig<TSubject>>(prototype)
     where TSubject : class, IPrototypeSubject
 {
     /// <inheritdoc/>

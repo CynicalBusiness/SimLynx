@@ -70,14 +70,12 @@ public static class ComponentConfigSlot
 /// Prototype config slot for configuring components on a <typeparamref name="TSubject"/> component.
 /// </summary>
 /// <typeparam name="TSubject">The type of the component being configured.</typeparam>
-/// <param name="slotId">The ID of the config slot.</param>
 /// <param name="prototype">The prototype being configured.</param>
 /// <param name="prototypeResolver">The factory for creating component prototype registries.</param>
 public class ComponentConfigSlot<TSubject>(
-    Symbol slotId,
     IComponentPrototype<TSubject> prototype,
     PrototypeResolver<Component> prototypeResolver
-) : PrototypeConfigSlot<TSubject, IComponentConfig<TSubject>>(prototype, slotId)
+) : PrototypeConfigSlot<TSubject, IComponentConfig<TSubject>>(prototype)
     where TSubject : Component
 {
     private readonly MethodInfo _genericCreateMethod = typeof(ComponentConfigSlot<TSubject>).GetMethod(

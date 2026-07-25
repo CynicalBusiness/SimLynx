@@ -68,11 +68,6 @@ public class Prototype<TSubject>(Symbol id, PrototypeContext<TSubject> context) 
 
     IPrototypeConfigSlot? IPrototype.this[Symbol slotId] => this[slotId];
 
-    /// <summary>
-    /// Resolver for config slots for this prototype.
-    /// </summary>
-    protected PrototypeConfigSlotResolver<TSubject> ConfigSlotResolver => context.ConfigSlotResolverFactory(this);
-
     /// <inheritdoc/>
     public IBlueprint<TSubject> Compile()
     {
@@ -95,13 +90,18 @@ public class Prototype<TSubject>(Symbol id, PrototypeContext<TSubject> context) 
     /// <summary>
     /// Gets an effective enumeration of config slots for this prototype, including inherited slots.
     /// </summary>
+    /// <remarks>
+    /// Slots are ordered by their priority, with higher-priority slots appearing first, with ties broken by
+    /// <em>DI container</em> registration order.
+    /// </remarks>
     /// <returns>An enumerable of effective config slots for this prototype.</returns>
     protected virtual IEnumerable<IPrototypeConfigSlotFor<TSubject>> GetAllSlots()
     {
         return this.GetAncestors(includeSelf: true)
             .SelectMany(prototype => prototype.Slots)
             .Cast<IPrototypeConfigSlotFor<TSubject>>()
-            .Distinct(PrototypeConfigSlotIdComparer<IPrototypeConfigSlotFor<TSubject>>.Default);
+            .Distinct(PrototypeConfigSlotIdComparer<IPrototypeConfigSlotFor<TSubject>>.Default)
+            .OrderBy(slot => context.ConfigSlotCatalog.EntriesById[slot.Id].SortIndex);
     }
 
     /// <inheritdoc cref="IPrototype.TryGetSlot"/>
@@ -113,7 +113,7 @@ public class Prototype<TSubject>(Symbol id, PrototypeContext<TSubject> context) 
         if (!Slots.TryGetValue(slotId, out slot))
         {
             if (
-                ConfigSlotResolver.TryResolve(slotId, out var resolvedSlot)
+                context.ConfigSlotCatalog.TryResolve(slotId, this, out var resolvedSlot)
                 && resolvedSlot is IPrototypeConfigSlot<TSubject, IPrototypeConfig> typedSlot
             )
             {
@@ -153,7 +153,7 @@ public class Prototype<TSubject>(Symbol id, PrototypeContext<TSubject> context) 
             return slot is not null;
         }
 
-        if (!ConfigSlotResolver.TryResolve<TConfig>(out var resolvedSlot))
+        if (!context.ConfigSlotCatalog.TryResolve<TSubject, TConfig>(this, out var resolvedSlot))
         {
             slot = default;
             typedSlotsCache[typeof(TConfig)] = null;

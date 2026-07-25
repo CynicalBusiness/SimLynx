@@ -57,47 +57,87 @@ public static class SimLynxExtensions
     extension(Type @this)
     {
         /// <summary>
-        /// Determines if the specified type is a subclass of a raw generic type.
+        /// Gets an enumeration of all assignable generic types from <paramref name="this"/> type that match the
+        /// specified <paramref name="genericTypeDefinition"/>
         /// </summary>
-        /// <param name="generic">The generic type to check against.</param>
-        /// <param name="bailAtType">The type at which to stop checking the inheritance chain, or <c>null</c> to check all the way up the hierarchy.</param>
-        /// <param name="found">The found closed generic type, if any.</param>
-        /// <returns><c>true</c> if the type is a subclass of the specified raw generic type; otherwise, <c>false</c>.</returns>
-        public bool IsSubclassOfGenericDefinition(Type generic, Type? bailAtType, [MaybeNullWhen(false)] out Type found)
+        /// <remarks>
+        /// If <paramref name="this"/> type is an open generic type, the enumeration may also include
+        /// the open constructed generic types which match the definition. For fully-closed class/struct/interface
+        /// types the enumeration will only include closed generic types, for each closed type
+        /// whose definition matches.
+        /// <br/>
+        /// All other varieties of types are considered invalid.
+        /// </remarks>
+        /// <param name="genericTypeDefinition">The definition to compare against.</param>
+        /// <returns>The enumeration of all assignable generic types that match the specified generic type definition.</returns>
+        public IEnumerable<Type> GetGenericTypesOf(Type genericTypeDefinition)
         {
-            Type? next = @this;
-            while (next != null && next != bailAtType)
+            ArgumentNullException.ThrowIfNull(genericTypeDefinition);
+
+            if (!genericTypeDefinition.IsGenericTypeDefinition)
             {
-                if (
-                    (next.IsGenericType && next.GetGenericTypeDefinition() == generic)
-                    || (next.IsGenericTypeDefinition && next == generic)
-                )
-                {
-                    found = next;
-                    return true;
-                }
-                next = next.BaseType;
+                throw new ArgumentException(
+                    "The provided type must be a generic type definition.",
+                    nameof(genericTypeDefinition)
+                );
             }
-            found = null;
-            return false;
+
+            if (!@this.IsClass && !@this.IsInterface && !@this.IsValueType)
+            {
+                throw new ArgumentException("The source type must be a class, struct, or interface.", nameof(@this));
+            }
+
+            for (Type? baseType = @this; baseType is not null; baseType = baseType.BaseType)
+            {
+                if (baseType.IsGenericType && baseType.GetGenericTypeDefinition() == genericTypeDefinition)
+                {
+                    yield return baseType;
+                }
+            }
+
+            foreach (var interfaceType in @this.GetInterfaces())
+            {
+                if (interfaceType.IsGenericType && interfaceType.GetGenericTypeDefinition() == genericTypeDefinition)
+                {
+                    yield return interfaceType;
+                }
+            }
         }
 
-        /// <inheritdoc cref="IsSubclassOfGenericDefinition(Type, Type?, out Type)"/>
-        public bool IsSubclassOfGenericDefinition(Type generic, [MaybeNullWhen(false)] out Type found)
+        /// <summary>
+        /// Determines if the specified type is either a subclass of, or implements, the specified
+        /// <paramref name="genericType"/> definition, outputting the first found closed generic type that matches the
+        /// definition.
+        /// </summary>
+        /// <remarks>
+        /// The provided <paramref name="this"/> type may be either a concrete class/struct type, an interface, or an
+        /// open generic type of such.
+        /// </remarks>
+        /// <param name="genericType">The generic type to check against.</param>
+        /// <param name="found">The found closed generic type, if any.</param>
+        /// <returns><c>true</c> if the type is a subclass of the specified open generic type; otherwise, <c>false</c>.</returns>
+        public bool IsGenericTypeOf(Type genericType, [MaybeNullWhen(false)] out Type found)
         {
-            return IsSubclassOfGenericDefinition(@this, generic, null, out found);
+            if (!genericType.IsGenericTypeDefinition)
+            {
+                throw new ArgumentException(
+                    "The provided type must be a generic type definition.",
+                    nameof(genericType)
+                );
+            }
+
+            found = @this.GetGenericTypesOf(genericType).FirstOrDefault();
+            return found is not null;
         }
 
-        /// <inheritdoc cref="IsSubclassOfGenericDefinition(Type, Type?, out Type)"/>
-        public bool IsSubclassOfGenericDefinition(Type generic)
+        /// <summary>
+        /// Determines if the specified type is either a subclass of, or implements, the specified
+        /// <paramref name="genericType"/> definition.
+        /// </summary>
+        /// <inheritdoc cref="IsGenericTypeOf(Type, Type, out Type)"/>
+        public bool IsGenericTypeOf(Type genericType)
         {
-            return IsSubclassOfGenericDefinition(@this, generic, null, out _);
-        }
-
-        /// <inheritdoc cref="IsSubclassOfGenericDefinition(Type, Type?, out Type)"/>
-        public bool IsSubclassOfGenericDefinition(Type generic, Type? bailAtType)
-        {
-            return IsSubclassOfGenericDefinition(@this, generic, bailAtType, out _);
+            return @this.IsGenericTypeOf(genericType, out _);
         }
 
         /// <summary>
