@@ -1,3 +1,4 @@
+using System;
 using SimLynx.Design.Prototyping;
 using SimLynx.Design.Prototyping.Blueprints;
 
@@ -27,15 +28,20 @@ public class ComponentConfig<TSubject, TComponent>(PrototypeResolver<Component> 
         }
 
         // TODO stub
-        throw new System.NotImplementedException();
+        throw new NotImplementedException();
     }
 
     /// <inheritdoc/>
-    public bool Clear()
+    public void Clear()
     {
-        var cleared = !IsEmpty;
         ComponentPrototype = null;
-        return cleared;
+    }
+
+    /// <inheritdoc/>
+    public void Reset()
+    {
+        // TODO stub
+        throw new NotImplementedException();
     }
 
     /// <summary>

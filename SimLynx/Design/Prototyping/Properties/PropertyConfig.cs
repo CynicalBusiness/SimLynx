@@ -108,7 +108,7 @@ public class PropertyConfig<TSubject, TValue>(PropertyInfo property)
     public bool HasValue => value.HasValue;
 
     /// <inheritdoc/>
-    public bool CanSetValue => HasValue || defaultValueFunc.Value is not null;
+    public bool CanSetValue => HasReset || HasValue || defaultValueFunc.Value is not null;
 
     /// <inheritdoc/>
     public bool HasConfigurations => configurations.Count > 0;
@@ -116,16 +116,24 @@ public class PropertyConfig<TSubject, TValue>(PropertyInfo property)
     /// <inheritdoc/>
     public bool IsEmpty => !HasValue && !HasConfigurations;
 
+    /// <summary>
+    /// Indicates this config contains a reset
+    /// </summary>
+    public bool HasReset { get; private set; } = false;
+
     /// <inheritdoc/>
-    public bool Clear()
+    public void Clear()
     {
-        if (IsEmpty)
-        {
-            return false;
-        }
         configurations.Clear();
         value = Maybe<ValueFunc>.None;
-        return true;
+        HasReset = false;
+    }
+
+    /// <inheritdoc/>
+    public void Reset()
+    {
+        Clear();
+        HasReset = true;
     }
 
     /// <inheritdoc/>
@@ -211,7 +219,7 @@ public class PropertyConfig<TSubject, TValue>(PropertyInfo property)
     /// <param name="value"></param>
     public void Configure(ValueFunc value)
     {
-        Clear();
+        Reset();
         this.value = value;
     }
 
@@ -233,8 +241,13 @@ public class PropertyConfig<TSubject, TValue>(PropertyInfo property)
 
         if (value.HasValue)
         {
+            // setting a value also resets
             var valueFunc = value.Value;
             target.SetValue(() => valueFunc());
+        }
+        else if (HasReset)
+        {
+            target.Reset();
         }
 
         configurations.ForEach(configuration => target.AddConfiguration(value => configuration(value)));

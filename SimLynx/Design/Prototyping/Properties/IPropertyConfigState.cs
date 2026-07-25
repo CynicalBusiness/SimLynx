@@ -2,7 +2,7 @@ using System;
 
 namespace SimLynx.Design.Prototyping.Properties;
 
-internal interface IPropertyConfigState
+internal interface IPropertyConfigState : IPropertyConfig
 {
     void CopyTo(IPropertyConfig other);
 }

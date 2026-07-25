@@ -19,10 +19,28 @@ public interface IPrototypeConfig
     public bool IsEmpty { get; }
 
     /// <summary>
-    /// Clears this config, returning if clearing was successful. If this config had nothing to clear, <c>false</c> is
-    /// returned.
+    /// Clears this config.
     /// </summary>
-    public bool Clear();
+    /// <remarks>
+    /// This method only clears configuration (e.g. whatever would make <see cref="IsEmpty"/> <c>true</c>), but does
+    /// not affect other configs for the same feature (such as on base prototypes).
+    /// <br/>
+    /// To reset the feature to its default state irrespective of those configs, use <see cref="Reset"/> instead.
+    /// <br/>
+    /// For some implementations, the "reset" state may be cleared by this method.
+    /// </remarks>
+    public void Clear();
+
+    /// <summary>
+    /// Explicitly resets the feature configured by this config to its default state.
+    /// </summary>
+    /// <remarks>
+    /// This method indicates that the feature should begin again in its default state, irrespective of other configs
+    /// for the feature (such as on base prototypes), as if it had never been configured.
+    /// <br/>
+    /// To simply clear this particular config, use <see cref="Clear"/> instead.
+    /// </remarks>
+    public void Reset();
 }
 
 /// <summary>

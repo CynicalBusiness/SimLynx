@@ -126,7 +126,3 @@ builder's parameters, options, and handlers.
     - [ ] Design-to-Simulation catalog creation;
     - [ ] catalog lookup and subject creation through Autofac;
     - [ ] abstract and failure cases.
-
-## Open Questions
-
-- Should `Clear()` mean "remove this patch" or emit a clearing operation that overrides inherited configuration?
