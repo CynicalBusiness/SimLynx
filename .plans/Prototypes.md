@@ -8,8 +8,8 @@ Last reviewed against the current `SimLynx/Design/Prototyping` and
 
 ## Intent
 
-Prototypes provide runtime-defined "is a" relationships, a code-first configuration surface that can later support
-loaders and UGC, and a place to move reflection and configuration work out of the simulation hot path.
+Prototypes provide runtime-defined "is a" relationships, a code-first configuration surface, and a place to move
+reflection and configuration work out of the simulation hot path.
 
 The implementation has an explicit phase split:
 
@@ -52,8 +52,7 @@ The implementation has an explicit phase split:
 - Compilation uses the nearest resolved slot for each slot ID across the prototype hierarchy, so inherited-only slots
   participate without requiring a getter call on the derived prototype.
 
-The first complete slot is `Properties`. A `Components` slot has also been introduced, but its compilation and config
-behavior are still stubs.
+The first complete slot is `Properties`.
 
 ### Property configuration
 
@@ -81,8 +80,8 @@ behavior are still stubs.
   registrations, and a Simulation-lifetime catalog compiled from the Design registry.
 - `PrototypeSubjectRegistrationSource<TBaseSubject>` allows concrete subject types to be constructed through Autofac.
 
-Registry compilation currently compiles every registered prototype, including abstract prototypes, and performs no
-graph-wide validation before constructing the catalog.
+Registry compilation validates the prototype graph, omits abstract prototypes, and compiles each concrete prototype
+into the catalog. Direct compilation of an abstract prototype fails.
 
 ### Blueprints and catalog
 
@@ -95,35 +94,15 @@ graph-wide validation before constructing the catalog.
 - `BlueprintCatalog<TBaseSubject>` is implemented as a read-only dictionary from prototype ID to blueprint.
 - `PrototypeRegistry.Compile()` creates the catalog from all registry entries.
 
-The catalog is structurally read-only, but prototypes and any delegate-captured config state remain mutable unless the
-compilation path explicitly copies them. Property configs do make stabilized copies; this guarantee has not yet been
-defined for every future slot.
+The catalog is structurally read-only. Blueprints retain their source prototype for identity and hierarchy inspection;
+the relevant structural state (`Id`, `Base`, and `SubjectType`) is stable after initialization. `IsAbstract` may be
+extended by specialized prototype types, but is checked before compilation and is not consulted when creating
+instances from an existing blueprint.
 
-### Component prototypes
-
-- Component-model integration now exists and is no longer wholly out of scope.
-- `ComponentPrototype<TComponent>` specializes `Prototype<TComponent>` and derives abstractness from both explicit
-  prototype state and `IComponentType.IsAbstract`.
-- `IComponentConfig` and `ComponentConfigSlot` define the initial shape for attaching named child components. Config
-  names combine the component type and optional given name.
-- `ComponentModelModule` registers `PrototypeModule<Component>` with `ComponentPrototype<>` as its implementation.
-
-`ComponentConfig`, its nested component prototype, and `ComponentConfigSlot.Configure(...)` remain unimplemented. The
-current component slot is therefore an API scaffold, not usable blueprint behavior.
-
-## Design Gaps
-
-The current code-first model does not yet provide the loader/UGC concerns from the broader design:
-
-- source metadata such as package, loader, file, and line;
-- ordered patches from multiple contributors;
-- deferred base-ID resolution and forward references;
-- conflict diagnostics and invalid override reporting;
-- inheritance cycle detection and graph validation;
-- a defined policy for compiling or instantiating abstract prototypes;
-- a fully immutable compiled representation independent of mutable prototype objects;
-- component add, remove, replace, and inherited merge semantics;
-- file-based loaders.
+Each config slot must snapshot any mutable state used by its compiled parameters, options, and handlers. Compiled
+behavior must not read mutable slot or config objects after compilation. Property configs satisfy this contract by
+copying their effective state before applying it to the blueprint builder, and `Blueprint<TSubject>` snapshots the
+builder's parameters, options, and handlers.
 
 ## Next Implementation Steps
 
@@ -137,40 +116,17 @@ The current code-first model does not yet provide the loader/UGC concerns from t
     - validate subject-type compatibility across the full chain;
     - define and enforce abstract prototype compilation/instantiation rules;
     - report errors with prototype IDs and the relevant chain.
-3. [ ] Define the compilation contract:
-    - [ ] specify which state is snapshotted and which references may remain live;
+3. [x] Define the compilation contract:
+    - [x] specify which state is snapshotted and which references may remain live;
     - [x] make slot discovery deterministic and independent of which code-first getters happened to run;
     - [x] define duplicate slot/config registration behavior;
-    - [ ] prevent mutation from changing already compiled blueprints.
+    - [x] prevent mutation from changing already compiled blueprints.
 4. [ ] Add focused registry and lifecycle tests:
     - [ ] creation, compatible reuse, duplicate IDs, base lookup, and `OnPrototypeAdded`;
     - [ ] Design-to-Simulation catalog creation;
     - [ ] catalog lookup and subject creation through Autofac;
     - [ ] abstract and failure cases.
-5. [ ] Complete component config behavior:
-    - construct and expose nested component prototypes;
-    - compile attachment behavior into parent blueprints;
-    - define names, inheritance, removal, replacement, and duplicate-component rules;
-    - integrate component build context and instance state.
-6. [ ] Add loader-facing design data only after the code-first compile semantics stabilize:
-    - source-aware patches and deterministic ordering;
-    - deferred ID resolution;
-    - diagnostics suitable for content authors;
-    - file formats and loaders.
 
 ## Open Questions
 
-- Should abstract prototypes be omitted from the blueprint catalog, represented by non-instantiable blueprints, or
-  cause direct `Compile()` to fail?
-- Should slot participation be registered globally for every prototype type, or discovered from configs across the
-  complete inheritance chain?
-- Should `Base` remain a direct reference in the code-first API while loaders use deferred IDs, or should all design
-  prototypes store IDs until validation?
-- Should setting a property use a value factory, a captured value, or support both explicitly?
 - Should `Clear()` mean "remove this patch" or emit a clearing operation that overrides inherited configuration?
-- Should property configurability remain public-setter-by-default before untrusted UGC loaders exist?
-- How much should blueprint creation depend on Autofac versus an engine-native factory abstraction?
-- Should compiled blueprints retain their mutable source prototype for identity/inspection, or expose a frozen prototype
-  descriptor?
-- How should component identity work when multiple components of the same type have no given name?
-- How should patches from multiple packages be ordered, diagnosed, and overridden?

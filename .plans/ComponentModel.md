@@ -100,6 +100,18 @@ Runtime concepts:
 
 Component resolution should operate over the context tree rather than an arbitrary mutable collection.
 
+## Current Prototype Integration
+
+- A `Components` prototype config slot has been introduced, but its compilation and config behavior are still stubs.
+- `ComponentPrototype<TComponent>` specializes `Prototype<TComponent>` and derives abstractness from both explicit
+  prototype state and `IComponentType.IsAbstract`.
+- `IComponentConfig` and `ComponentConfigSlot` define the initial shape for attaching named child components. Config
+  names combine the component type and optional given name.
+- `ComponentModelModule` registers `PrototypeModule<Component>` with `ComponentPrototype<>` as its implementation.
+
+`ComponentConfig`, its nested component prototype, and `ComponentConfigSlot.Configure(...)` remain unimplemented. The
+current component slot is therefore an API scaffold, not usable blueprint behavior.
+
 ## Instance State
 
 `IComponentBuilder.RegisterState<T>()` is an ergonomic and useful concept. The builder should record state declarations and return typed handles.
@@ -215,21 +227,26 @@ Consider state definition classes later for source generation, tooling, validati
 
 ## Initial Implementation Steps
 
-1. Define component context tree and immutable runtime component graph.
-2. Implement component builder with state registration and freeze semantics.
-3. Implement typed `IInstanceState<T>` handles backed by layout slots.
-4. Implement instance tables with dense column storage.
-5. Add component-provided slice/query APIs.
-6. Add access declaration metadata for read/write scheduling.
-7. Implement system execution over component-provided batch views.
-8. Add validation for illegal late state registration.
-9. Explore optional state definition classes after the base model works.
+1. Complete component prototype config behavior:
+    - construct and expose nested component prototypes;
+    - compile attachment behavior into parent blueprints;
+    - define names, inheritance, removal, replacement, and duplicate-component rules;
+    - integrate component build context and instance state.
+2. Define component context tree and immutable runtime component graph.
+3. Implement component builder with state registration and freeze semantics.
+4. Implement typed `IInstanceState<T>` handles backed by layout slots.
+5. Implement instance tables with dense column storage.
+6. Add component-provided slice/query APIs.
+7. Add access declaration metadata for read/write scheduling.
+8. Implement system execution over component-provided batch views.
+9. Add validation for illegal late state registration.
+10. Explore optional state definition classes after the base model works.
 
 ## Open Questions
 
 - Should component layouts be allowed to vary per prototype for the same component CLR type?
+- How should component identity work when multiple components of the same type have no given name?
 - How should systems express cross-component queries without bypassing component ownership?
 - Should structural changes be deferred command buffers by default?
 - Should query views expose `Span<T>` directly, or a safer wrapper that still optimizes well?
 - How much should the scheduler know about component state handles versus higher-level component views?
-

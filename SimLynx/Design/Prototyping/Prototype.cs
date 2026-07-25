@@ -28,7 +28,7 @@ public class Prototype<TSubject>(Symbol id, PrototypeContext<TSubject> context) 
     public Symbol Id { get; } = id;
 
     /// <inheritdoc cref="IPrototype.Base"/>
-    public virtual IPrototype? Base
+    public IPrototype? Base
     {
         get => field;
         init
@@ -53,7 +53,7 @@ public class Prototype<TSubject>(Symbol id, PrototypeContext<TSubject> context) 
     public virtual bool IsAbstract { get; init; } = false;
 
     /// <inheritdoc/>
-    public virtual Type SubjectType => typeof(TSubject);
+    public Type SubjectType => typeof(TSubject);
 
     /// <summary>
     /// Gets the currently-defined config, if any, for the given <paramref name="slotId"/> and <paramref name="configName"/>.
