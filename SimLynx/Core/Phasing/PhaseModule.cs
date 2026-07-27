@@ -7,8 +7,7 @@ namespace SimLynx.Core.Phasing;
 /// Module for registering a phase and its manager in the DI container.
 /// </summary>
 /// <typeparam name="TPhase">The type of the phase.</typeparam>
-/// <param name="phaseId">The identifier for the phase.</param>
-public class PhaseModule<TPhase>(string phaseId) : Module
+public class PhaseModule<TPhase> : Module
     where TPhase : class, IPhase
 {
     /// <inheritdoc/>
@@ -32,19 +31,7 @@ public class PhaseModule<TPhase>(string phaseId) : Module
             .WithDeliveryStrategy(ConcurrentHookDeliveryStrategy.Default)
             .WithPipe(payload => (OnPhaseRun)payload);
 
-        builder
-            .RegisterType<TPhase>()
-            .AsSelf()
-            .AsImplementedInterfaces()
-            .Named<TPhase>(phaseId)
-            .InstancePerOwned<TPhase>();
-
-        builder
-            .RegisterType<PhaseBuilder<TPhase>>()
-            .AsSelf()
-            .AsImplementedInterfaces()
-            .WithParameter(new NamedParameter("phaseId", phaseId))
-            .Named<PhaseBuilder<TPhase>>(phaseId)
-            .InstancePerDependency();
+        builder.RegisterType<TPhase>().AsSelf().As<Phase>().AsImplementedInterfaces().InstancePerPhase(typeof(TPhase));
+        builder.RegisterType<PhaseBuilder<TPhase>>().AsSelf().AsImplementedInterfaces().InstancePerDependency();
     }
 }

@@ -8,11 +8,11 @@ using Microsoft.Extensions.Logging;
 
 namespace SimLynx.Simulation;
 
-internal class StageManager : IStageManager, IStartable, IDisposable
+internal class StageManager : IStageManager, IDisposable
 {
     private readonly Dictionary<string, Owned<IStage>> _stages;
 
-    internal StageManager(ILifetimeScope scope, ILogger<StageManager> logger)
+    public StageManager(ILifetimeScope scope, ILogger<StageManager> logger)
     {
         _stages = scope
             .ResolveKeyed<IEnumerable<Owned<IStage>>>(KeyedService.AnyKey)

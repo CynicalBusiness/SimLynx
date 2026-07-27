@@ -11,7 +11,6 @@ namespace SimLynx.Core.Phasing;
 /// Base implementation for a phase manager, with extra support for only-once initialization and chaining.
 /// </summary>
 public class PhaseBuilder<TPhase>(
-    string phaseId,
     ILogger<PhaseBuilder<TPhase>> logger,
     ILifetimeScope currentScope,
     Hook<OnPhaseConfigure<TPhase>> configureHook,
@@ -24,7 +23,7 @@ public class PhaseBuilder<TPhase>(
     /// </summary>
     public static readonly LogEvent<string> InitLogEvent = new(
         EventId.For<PhaseBuilder<TPhase>>("PhaseBuilderInit"),
-        "Initializing phase: {PhaseId}"
+        "Initializing phase: {Phase}"
     );
 
     private Task? _initTask;
@@ -34,11 +33,6 @@ public class PhaseBuilder<TPhase>(
     /// Whether or not this manager has initialized yet.
     /// </summary>
     public bool IsInitialized => _initTask is not null;
-
-    /// <summary>
-    /// ID of the phase this builder is building.
-    /// </summary>
-    public string PhaseId { get; } = phaseId;
 
     /// <summary>
     /// Resets the initialization state of this manager, allowing it to be initialized again.
@@ -61,10 +55,7 @@ public class PhaseBuilder<TPhase>(
     {
         await TryInit(cancellationToken);
 
-        var phaseScope = currentScope.BeginLifetimeScope(
-            Phase.GetLifetimeScopeTag(typeof(TPhase), PhaseId),
-            ConfigureContainer
-        );
+        var phaseScope = currentScope.BeginLifetimeScope(Phase.GetLifetimeScopeTag(typeof(TPhase)), ConfigureContainer);
         var phase = phaseScope.Resolve<TPhase>();
         return phase;
     }
@@ -77,7 +68,7 @@ public class PhaseBuilder<TPhase>(
     /// <returns>A task that represents the initialization operation.</returns>
     protected virtual Task Init(CancellationToken cancellationToken)
     {
-        return initHook.Invoke(new OnPhaseInit<TPhase>(PhaseId), cancellationToken);
+        return initHook.Invoke(new OnPhaseInit<TPhase>(), cancellationToken);
     }
 
     /// <summary>
@@ -86,7 +77,7 @@ public class PhaseBuilder<TPhase>(
     /// <param name="builder">The <see cref="ContainerBuilder"/> instance to configure.</param>
     protected virtual void ConfigureContainer(ContainerBuilder builder)
     {
-        configureHook.Invoke(new OnPhaseConfigure<TPhase>(PhaseId, builder)).Wait();
+        configureHook.Invoke(new OnPhaseConfigure<TPhase>(builder)).Wait();
     }
 
     private Task TryInit(CancellationToken cancellationToken)
@@ -104,7 +95,7 @@ public class PhaseBuilder<TPhase>(
             _initTaskLock.EnterWriteLock();
             try
             {
-                InitLogEvent.Log(logger, PhaseId);
+                InitLogEvent.Log(logger, typeof(TPhase).ToString());
                 return _initTask = Init(cancellationToken);
             }
             finally

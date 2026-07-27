@@ -13,6 +13,6 @@ internal class PhasingModule() : Module
         builder.RegisterHook<OnPhaseInit>().WithDeliveryStrategy(ConcurrentHookDeliveryStrategy.Default);
         builder.RegisterHook<OnPhaseRun>().WithDeliveryStrategy(ConcurrentHookDeliveryStrategy.Default);
 
-        builder.RegisterType<PhaseManager>().As<IPhaseManager>().InstancePerLifetimeScope();
+        builder.RegisterType<PhaseRunner>().InstancePerLifetimeScope();
     }
 }

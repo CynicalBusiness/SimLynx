@@ -103,7 +103,7 @@ public readonly struct Symbol : IEquatable<Symbol>
         if (name.Length > MAX_NAME_LENGTH)
         {
             throw new ArgumentException(
-                $"Symbol name exceeds maximum length of {MAX_NAME_LENGTH} characters.",
+                $"Symbol name '{name}' exceeds maximum length of {MAX_NAME_LENGTH} characters.",
                 nameof(name)
             );
         }

@@ -3,8 +3,10 @@ using System.Threading.Tasks;
 using Autofac;
 using Semver;
 using SimLynx.Core.Phasing;
+using SimLynx.Design;
 using SimLynx.Discovery;
 using SimLynx.Discovery.Content;
+using SimLynx.Simulation;
 
 namespace SimLynx;
 
@@ -21,8 +23,9 @@ public abstract class SimLynxApp : IContentPackage
     /// <summary>
     /// Initializes a new app instance.
     /// </summary>
-    protected SimLynxApp()
+    protected SimLynxApp(ILifetimeScope scope)
     {
+        Scope = scope;
         Manifest = CreateContentManifest();
     }
 
@@ -32,12 +35,7 @@ public abstract class SimLynxApp : IContentPackage
     /// <summary>
     /// The Autofac scope for this application.
     /// </summary>
-    public required ILifetimeScope Scope { get; init; }
-
-    /// <summary>
-    /// The phase ID that the app will begin with.
-    /// </summary>
-    public Symbol InitialPhaseId { get; protected init; } = DiscoveryPhase.PhaseId;
+    protected ILifetimeScope Scope { get; }
 
     /// <summary>
     /// Runs the application, returning a task that represents its lifetime. The returned task should complete when the
@@ -51,7 +49,28 @@ public abstract class SimLynxApp : IContentPackage
     /// <returns>A task that represents the application's lifetime.</returns>
     public virtual Task RunAsync(CancellationToken cancellationToken)
     {
-        return Scope.BeginPhase(InitialPhaseId, cancellationToken);
+        return Scope.BeginPhase(CreatePhasePlan(), cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates a new phase plan for the application.
+    /// </summary>
+    /// <returns>The created phase plan.</returns>
+    public PhasePlan CreatePhasePlan()
+    {
+        var builder = new PhasePlan.Builder();
+        ConfigurePhasePlan(builder);
+        return builder.Build();
+    }
+
+    /// <summary>
+    /// Override to configure the phase plan for the main app. The default implementation configures the standard
+    /// SimLynx phases in the order of Discovery, Design, and Simulation.
+    /// </summary>
+    /// <param name="builder">The phase plan builder to configure.</param>
+    protected virtual void ConfigurePhasePlan(PhasePlan.Builder builder)
+    {
+        builder.Then<DiscoveryPhase>().Then<DesignPhase>().Then<SimulationPhase>();
     }
 
     /// <summary>

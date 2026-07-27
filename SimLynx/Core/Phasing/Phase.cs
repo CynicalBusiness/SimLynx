@@ -21,24 +21,22 @@ public abstract class Phase : IPhase
     /// Gets the tag for lifetime scopes associated with the given <paramref name="phaseType"/>.
     /// </summary>
     /// <param name="phaseType">The type of the phase.</param>
-    /// <param name="phaseId">The ID of the phase.</param>
     /// <returns>The tag for the lifetime scope associated with the phase type.</returns>
-    public static PhaseScopeTag GetLifetimeScopeTag(Type phaseType, string phaseId)
+    public static PhaseScopeTag GetLifetimeScopeTag(Type phaseType)
     {
         ArgumentNullException.ThrowIfNull(phaseType);
-        return new PhaseScopeTag(phaseType, phaseId);
+        return new PhaseScopeTag(phaseType);
     }
 
     /// <summary>
     /// Gets the tag for lifetime scopes associated with the given <typeparamref name="TPhase"/>.
     /// </summary>
     /// <typeparam name="TPhase">The type of the phase.</typeparam>
-    /// <param name="phaseId">The ID of the phase.</param>
     /// <returns>The tag for the lifetime scope associated with the phase type.</returns>
-    public static PhaseScopeTag GetLifetimeScopeTag<TPhase>(string phaseId)
+    public static PhaseScopeTag GetLifetimeScopeTag<TPhase>()
         where TPhase : Phase
     {
-        return GetLifetimeScopeTag(typeof(TPhase), phaseId);
+        return GetLifetimeScopeTag(typeof(TPhase));
     }
 
     private static readonly MethodInfo InvokeRunHookMethod = typeof(Phase).GetMethod(
@@ -50,9 +48,6 @@ public abstract class Phase : IPhase
 
     /// <inheritdoc/>
     public bool HasStarted => runTask is not null;
-
-    /// <inheritdoc/>
-    public string? NextPhaseId { get; set; }
 
     /// <inheritdoc/>
     public required ILifetimeScope Scope { get; init; }

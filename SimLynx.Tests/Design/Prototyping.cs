@@ -1,29 +1,35 @@
 using System;
 using Autofac;
-using SimLynx.Core.Phasing;
+using SimLynx.Design;
 using SimLynx.Design.Prototyping;
 using SimLynx.Design.Prototyping.Properties;
-using SimLynx.Design;
+using SimLynx.Testing;
 
-namespace SimLynx.Tests.Design.Prototyping;
+namespace SimLynx.Tests.Design;
 
-public class PropertyConfigSlotTests(PropertyConfigSlotTests.ContainerFixture containerFixture)
-    : IClassFixture<PropertyConfigSlotTests.ContainerFixture>
+public class Prototyping(Prototyping.Fixture fixture) : IClassFixture<Prototyping.Fixture>, IDisposable
 {
     public static readonly Symbol OwnPrototypeId = Symbol.For("Own");
     public static readonly Symbol BasePrototypeId = Symbol.For("Base");
     public static readonly Symbol DerivedBaseTypePrototypeId = Symbol.For("DerivedBaseType");
     public static readonly Symbol DerivedTypePrototypeId = Symbol.For("DerivedType");
 
+    public ILifetimeScope Container => fixture.PhaseScope;
+
+    public void Dispose()
+    {
+        // wipe the registry between tests to avoid cross-test contamination
+        Container.Resolve<PrototypeRegistry<PropertySubject>>().Clear();
+    }
+
     [Fact]
     public void Compile_AppliesOwnPropertyConfigs()
     {
-        using var scope = containerFixture.CreateDesignScope();
-        var prototype = GetPrototype<PropertySubject>(scope, OwnPrototypeId);
+        var prototype = GetPrototype<PropertySubject>(Container, OwnPrototypeId);
         prototype.GetProperty(x => x.RequiredText).Configure(() => "required");
         prototype.GetProperty(x => x.Text).Configure(() => "configured");
 
-        var subject = prototype.Compile().CreateInstance(scope);
+        var subject = prototype.Compile().CreateInstance(Container);
 
         Assert.Equal("configured", subject.Text);
     }
@@ -31,17 +37,16 @@ public class PropertyConfigSlotTests(PropertyConfigSlotTests.ContainerFixture co
     [Fact]
     public void Compile_AppliesInheritedSlotWhenDerivedHasNotResolvedIt()
     {
-        using var scope = containerFixture.CreateDesignScope();
-        var basePrototype = GetPrototype<PropertySubject>(scope, BasePrototypeId);
+        var basePrototype = GetPrototype<PropertySubject>(Container, BasePrototypeId);
         basePrototype.GetProperty(x => x.RequiredText).Configure(() => "required");
         basePrototype.GetProperty(x => x.Text).Configure(() => "inherited");
         var derivedPrototype = GetPrototype<PropertySubject>(
-            scope,
+            Container,
             DerivedBaseTypePrototypeId,
             basePrototypeId: BasePrototypeId
         );
 
-        var subject = derivedPrototype.Compile().CreateInstance(scope);
+        var subject = derivedPrototype.Compile().CreateInstance(Container);
 
         Assert.Equal("inherited", subject.Text);
     }
@@ -49,20 +54,18 @@ public class PropertyConfigSlotTests(PropertyConfigSlotTests.ContainerFixture co
     [Fact]
     public void Compile_MergesPropertySlotsAcrossDifferentSubjectTypes()
     {
-        using var scope = containerFixture.CreateDesignScope();
-        var basePrototype = GetPrototype<PropertySubject>(scope, BasePrototypeId);
+        var basePrototype = GetPrototype<PropertySubject>(Container, BasePrototypeId);
         basePrototype.GetProperty(x => x.RequiredText).Configure(() => "required");
         basePrototype.GetProperty(x => x.Text).Configure(() => "base");
 
-        var context = scope.Resolve<PrototypeContext<DerivedPropertySubject>>();
         var derivedPrototype = GetPrototype<DerivedPropertySubject>(
-            scope,
+            Container,
             DerivedTypePrototypeId,
             basePrototypeId: BasePrototypeId
         );
         derivedPrototype.GetProperty(x => x.Text).Configure(value => value + "-derived");
 
-        var subject = derivedPrototype.Compile().CreateInstance(scope);
+        var subject = derivedPrototype.Compile().CreateInstance(Container);
 
         Assert.Equal("base-derived", subject.Text);
     }
@@ -70,18 +73,21 @@ public class PropertyConfigSlotTests(PropertyConfigSlotTests.ContainerFixture co
     [Fact]
     public void Compile_MergesSetConfigureAndClearFromBaseToDerived()
     {
-        using var scope = containerFixture.CreateDesignScope();
-        var root = GetPrototype<PropertySubject>(scope, BasePrototypeId);
+        var root = GetPrototype<PropertySubject>(Container, BasePrototypeId);
         root.GetProperty(x => x.RequiredText).Configure(() => "required");
         root.GetProperty(x => x.Text).Configure(() => "root");
         root.GetProperty(x => x.Text).Configure(value => value + "-configured");
 
-        var middle = GetPrototype<PropertySubject>(scope, DerivedBaseTypePrototypeId, basePrototypeId: BasePrototypeId);
+        var middle = GetPrototype<PropertySubject>(
+            Container,
+            DerivedBaseTypePrototypeId,
+            basePrototypeId: BasePrototypeId
+        );
         middle.GetProperty(x => x.Text).Configure(() => "middle");
         middle.GetProperty(x => x.Text).Configure(value => value + "-configured");
 
         var derived = GetPrototype<DerivedPropertySubject>(
-            scope,
+            Container,
             DerivedTypePrototypeId,
             basePrototypeId: DerivedBaseTypePrototypeId
         );
@@ -90,7 +96,7 @@ public class PropertyConfigSlotTests(PropertyConfigSlotTests.ContainerFixture co
         cleared.Clear();
         derived.GetProperty(x => x.Text).Configure(value => value + "-derived");
 
-        var subject = derived.Compile().CreateInstance(scope);
+        var subject = derived.Compile().CreateInstance(Container);
 
         Assert.Equal("middle-configured-derived", subject.Text);
     }
@@ -98,15 +104,14 @@ public class PropertyConfigSlotTests(PropertyConfigSlotTests.ContainerFixture co
     [Fact]
     public void Compile_HandlesRequiredNullableValueTypeDefaultConstructibleAndNonPublicSetterProperties()
     {
-        using var scope = containerFixture.CreateDesignScope();
-        var prototype = GetPrototype<PropertySubject>(scope, OwnPrototypeId);
+        var prototype = GetPrototype<PropertySubject>(Container, OwnPrototypeId);
         prototype.GetProperty(x => x.RequiredText).Configure(() => "required");
         prototype.GetProperty(x => x.NullableText).Configure(() => null);
         prototype.GetProperty(x => x.Count).Configure(value => value + 4);
         prototype.GetProperty(x => x.Options).Configure(options => options.Value = 7);
         prototype.GetProperty(x => x.Hidden).Configure(() => "hidden");
 
-        var subject = prototype.Compile().CreateInstance(scope);
+        var subject = prototype.Compile().CreateInstance(Container);
 
         Assert.Equal("required", subject.RequiredText);
         Assert.Null(subject.NullableText);
@@ -127,31 +132,16 @@ public class PropertyConfigSlotTests(PropertyConfigSlotTests.ContainerFixture co
         return registry.Configure<TSubject>(id, isAbstract, basePrototypeId);
     }
 
-    public class ContainerFixture : IDisposable
+    public class Fixture() : PhaseFixture<SimLynxTestApp, DesignPhase>(options: new() { ShouldRunPhase = false })
     {
-        public ContainerFixture()
+        protected override void ConfigureContainer(ContainerBuilder builder)
         {
-            var builder = new ContainerBuilder();
+            base.ConfigureContainer(builder);
 
-            builder.RegisterModule(new PrototypingModule());
             builder.RegisterModule(new PrototypeModule<PropertySubject>());
 
             builder.RegisterType<PropertySubject>().AsSelf();
             builder.RegisterType<DerivedPropertySubject>().AsSelf();
-
-            Container = builder.Build();
-        }
-
-        public IContainer Container { get; }
-
-        public ILifetimeScope CreateDesignScope()
-        {
-            return Container.BeginLifetimeScope(Phase.GetLifetimeScopeTag<DesignPhase>(DesignPhase.PhaseId));
-        }
-
-        public void Dispose()
-        {
-            Container.Dispose();
         }
     }
 

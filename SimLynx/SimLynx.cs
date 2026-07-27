@@ -36,13 +36,26 @@ public class SimLynx<TApp> : Disposable
     /// before the container is built.
     /// </summary>
     /// <param name="configureContainer">An optional action to configure the container before it is built.</param>
-    public SimLynx(Action<ContainerBuilder>? configureContainer = null)
+    /// <param name="parentScope">An optional parent lifetime scope for the container.</param>
+    public SimLynx(Action<ContainerBuilder>? configureContainer = null, ILifetimeScope? parentScope = null)
     {
-        var builder = new ContainerBuilder();
-        builder.RegisterSimLynx<TApp>();
-        configureContainer?.Invoke(builder);
+        void configure(ContainerBuilder builder)
+        {
+            builder.RegisterSimLynx<TApp>();
+            configureContainer?.Invoke(builder);
+        }
 
-        Container = builder.Build();
+        if (parentScope is null)
+        {
+            var builder = new ContainerBuilder();
+            configure(builder);
+            Container = builder.Build();
+        }
+        else
+        {
+            Container = parentScope.BeginLifetimeScope(configure);
+        }
+
         App = Container.Resolve<TApp>();
     }
 
@@ -50,12 +63,12 @@ public class SimLynx<TApp> : Disposable
     /// Creates a new SimLynx instance with the given app type, using default configuration.
     /// </summary>
     public SimLynx()
-        : this(null) { }
+        : this(null, null) { }
 
     /// <summary>
     /// The DI container for this SimLynx instance.
     /// </summary>
-    public IContainer Container { get; private set; }
+    public ILifetimeScope Container { get; private set; }
 
     /// <summary>
     /// The SimLynx app for this SimLynx instance.

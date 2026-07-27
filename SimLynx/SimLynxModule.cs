@@ -4,8 +4,8 @@ using SimLynx.Core;
 using SimLynx.Core.Hooks;
 using SimLynx.Core.Logging;
 using SimLynx.Core.Phasing;
-using SimLynx.Design.Prototyping;
 using SimLynx.Design;
+using SimLynx.Design.Prototyping;
 using SimLynx.Discovery;
 using SimLynx.Simulation;
 
@@ -37,5 +37,6 @@ public class SimLynxModule<TApp> : Module
         builder.RegisterModule<SimulationModule>();
 
         builder.RegisterType<TApp>().AsSelf().As<SimLynxApp>().AsImplementedInterfaces().SingleInstance();
+        builder.Register(c => c.Resolve<TApp>().CreatePhasePlan()).As<PhasePlan>().SingleInstance();
     }
 }

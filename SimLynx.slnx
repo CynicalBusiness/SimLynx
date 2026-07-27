@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="SimLynx.Features.World/SimLynx.Features.World.csproj" />
+  <Project Path="SimLynx.Testing/SimLynx.Testing.csproj" />
   <Project Path="SimLynx.Tests/SimLynx.Tests.csproj" />
   <Project Path="SimLynx/SimLynx.csproj" />
 </Solution>

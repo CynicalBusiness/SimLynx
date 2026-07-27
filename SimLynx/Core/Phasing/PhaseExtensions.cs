@@ -17,13 +17,12 @@ public static class PhaseExtensions
         /// <summary>
         /// Registers a phase and its manager in the DI container, with the given phase ID as the key.
         /// </summary>
-        /// <typeparam name="TPhase"></typeparam>
-        /// <param name="phaseId"></param>
+        /// <typeparam name="TPhase">The type of phase to register</typeparam>
         /// <returns></returns>
-        public IModuleRegistrar RegisterPhase<TPhase>(string phaseId)
+        public IModuleRegistrar RegisterPhase<TPhase>()
             where TPhase : class, IPhase
         {
-            return builder.RegisterModule(new PhaseModule<TPhase>(phaseId));
+            return builder.RegisterModule(new PhaseModule<TPhase>());
         }
     }
 
@@ -45,26 +44,14 @@ public static class PhaseExtensions
             reg.RegistrationData.Lifetime = new PhaseTypeScopeLifetime(phaseType);
             return reg;
         }
-
-        /// <summary>
-        /// Configures a service to be registered such that it will have one instance per phase with the given ID.
-        /// </summary>
-        /// <param name="phaseId">The ID of the phase whose lifetime scope should own the instance.</param>
-        /// <returns>The registration builder for chaining.</returns>
-        public IRegistrationBuilder<TLimit, TData, TStyle> InstancePerPhase(string phaseId)
-        {
-            var reg = @this.InstancePerMatchingLifetimeScope(phaseId);
-            reg.RegistrationData.Lifetime = new PhaseIdScopeLifetime(phaseId);
-            return reg;
-        }
     }
 
     extension(ILifetimeScope scope)
     {
-        /// <inheritdoc cref="IPhaseManager.StartAsync"/>
-        public Task BeginPhase(string phaseId, CancellationToken cancellationToken = default)
+        /// <inheritdoc cref="PhaseRunner.StartAsync"/>
+        public Task BeginPhase(PhasePlan phasePlan, CancellationToken cancellationToken = default)
         {
-            return scope.Resolve<IPhaseManager>().StartAsync(phaseId, cancellationToken);
+            return scope.Resolve<PhaseRunner>().StartAsync(phasePlan, cancellationToken);
         }
     }
 }

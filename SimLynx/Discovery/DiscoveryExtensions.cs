@@ -1,4 +1,5 @@
 using Autofac.Builder;
+using SimLynx.Core.Phasing;
 
 namespace SimLynx.Discovery;
 
@@ -18,7 +19,7 @@ public static class DiscoveryExtensions
         /// <returns>The builder for further configuration.</returns>
         public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> DiscoveryInstance()
         {
-            return builder.InstancePerOwned<DiscoveryPhase>();
+            return builder.InstancePerPhase(typeof(DiscoveryPhase));
         }
     }
 }

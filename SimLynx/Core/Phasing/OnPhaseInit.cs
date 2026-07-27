@@ -6,13 +6,11 @@ namespace SimLynx.Core.Phasing;
 /// Hook for initialization of a phase, which occurs once for each phase before it is configured and run.
 /// </summary>
 /// <param name="PhaseType">The type of the phase being initialized.</param>
-/// <param name="PhaseId">The unique identifier of the phase being initialized.</param>
-public record OnPhaseInit(Type PhaseType, string PhaseId);
+public record OnPhaseInit(Type PhaseType);
 
 /// <summary>
 /// Hook for initialization of a <typeparamref name="TPhase"/>, which occurs once for each phase before it is configured
 /// and run.
 /// </summary>
 /// <typeparam name="TPhase">The type of the phase being initialized.</typeparam>
-/// <param name="PhaseId">The unique identifier of the phase being initialized.</param>
-public record OnPhaseInit<TPhase>(string PhaseId) : OnPhaseInit(typeof(TPhase), PhaseId);
+public record OnPhaseInit<TPhase>() : OnPhaseInit(typeof(TPhase));

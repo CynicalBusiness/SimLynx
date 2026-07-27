@@ -18,7 +18,7 @@ public static class LoggingExtensions
         /// <returns>An <see cref="EventId"/> representing the event.</returns>
         public static EventId For(Type definingType, string eventName)
         {
-            var name = $"{definingType.FullName}#{eventName}";
+            var name = $"{definingType}#{eventName}";
             return new EventId(Symbol.For(name).Value, name); // `Symbol.For` keeps event IDs stable across runs.
         }
 

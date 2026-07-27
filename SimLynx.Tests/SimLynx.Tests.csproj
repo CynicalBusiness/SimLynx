@@ -29,5 +29,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\SimLynx\SimLynx.csproj" />
+        <ProjectReference Include="..\SimLynx.Testing\SimLynx.Testing.csproj" />
     </ItemGroup>
 </Project>

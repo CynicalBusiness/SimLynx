@@ -20,11 +20,6 @@ public interface IPhase
     public ILifetimeScope Scope { get; }
 
     /// <summary>
-    /// The ID of the next phase to run after this one, if any.
-    /// </summary>
-    public string? NextPhaseId { get; set; }
-
-    /// <summary>
     /// Runs this phase, returning a task that completes when the phase completes.
     /// </summary>
     /// <param name="cancellationToken">A token to abort the run.</param>

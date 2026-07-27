@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Autofac.Features.AttributeFilters;
@@ -115,7 +116,7 @@ public class PrototypeRegistry<TBaseSubject>(PrototypeResolver<TBaseSubject> res
                 );
             }
 
-            if (isAbstract.HasValue)
+            if (isAbstract.HasValue && isAbstract.Value != prototype.IsAbstract)
             {
                 throw new ArgumentException(
                     $"{prototype} exists for {id} and cannot have its abstractness changed.",
@@ -123,7 +124,7 @@ public class PrototypeRegistry<TBaseSubject>(PrototypeResolver<TBaseSubject> res
                 );
             }
 
-            if (baseId.HasValue)
+            if (baseId.HasValue && baseId.Value != prototype.Base?.Id)
             {
                 throw new ArgumentException(
                     $"{prototype} exists for {id} and cannot have its base prototype changed.",
@@ -158,6 +159,15 @@ public class PrototypeRegistry<TBaseSubject>(PrototypeResolver<TBaseSubject> res
         {
             throw new ArgumentException($"Failed to configure prototype with ID '{id}'", nameof(id), ex);
         }
+    }
+
+    /// <summary>
+    /// Clears this registry of all prototypes.
+    /// </summary>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public void Clear()
+    {
+        _prototypes.Clear();
     }
 
     /// <summary>

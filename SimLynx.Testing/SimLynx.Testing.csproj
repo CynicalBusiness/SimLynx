@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <!-- Library for writing tests for projects utilizing SimLynx -->
+        <RootNamespace>SimLynx.Testing</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../SimLynx/SimLynx.csproj" />
+    </ItemGroup>
+
+</Project>

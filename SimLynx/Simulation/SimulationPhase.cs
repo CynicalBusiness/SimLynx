@@ -28,11 +28,6 @@ public class SimulationPhase : Phase, IDisposable
     public static TimeSpan DefaultTickRate { get; set; } = TimeSpan.FromSeconds(1.0 / 20.0); // 20 ticks per second
 
     /// <summary>
-    /// ID of the phase, used for keying dependencies.
-    /// </summary>
-    public static readonly Symbol PhaseId = nameof(SimulationPhase);
-
-    /// <summary>
     /// The metronome used for the simulation phase's internal timing.
     /// </summary>
     public required Metronome Metronome { get; init; }
