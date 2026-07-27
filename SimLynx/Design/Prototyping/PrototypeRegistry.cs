@@ -119,15 +119,18 @@ public class PrototypeRegistry<TBaseSubject>(PrototypeResolver<TBaseSubject> res
             if (isAbstract.HasValue && isAbstract.Value != prototype.IsAbstract)
             {
                 throw new ArgumentException(
-                    $"{prototype} exists for {id} and cannot have its abstractness changed.",
+                    $"{prototype} already exists and cannot have its abstractness changed.",
                     nameof(isAbstract)
                 );
             }
 
-            if (baseId.HasValue && baseId.Value != prototype.Base?.Id)
+            if (
+                baseId.HasValue
+                && (prototype.Base is null ? baseId.Value != Symbol.Empty : prototype.Base.Id != baseId.Value)
+            )
             {
                 throw new ArgumentException(
-                    $"{prototype} exists for {id} and cannot have its base prototype changed.",
+                    $"{prototype} already exists and cannot have its base prototype changed.",
                     nameof(baseId)
                 );
             }
@@ -138,12 +141,18 @@ public class PrototypeRegistry<TBaseSubject>(PrototypeResolver<TBaseSubject> res
         var basePrototype = Maybe<IPrototype?>.None;
         if (baseId.HasValue)
         {
-            if (!TryGet(baseId.Value, out var p))
+            if (baseId.Value == Symbol.Empty)
+            {
+                basePrototype = new(null);
+            }
+            else if (TryGet(baseId.Value, out var p))
+            {
+                basePrototype = new(p);
+            }
+            else
             {
                 throw new ArgumentException($"No prototype exists with ID '{baseId.Value}'", nameof(baseId));
             }
-
-            basePrototype = new(p);
         }
 
         try

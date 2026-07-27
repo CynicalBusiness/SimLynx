@@ -195,6 +195,6 @@ public class Prototype<TSubject>(Symbol id, PrototypeContext<TSubject> context) 
     /// <inheritdoc/>
     public override string ToString()
     {
-        return $"{GetType().Name}<{SubjectType.Name}>#{Id}";
+        return $"{GetType().Name}<{SubjectType.Name}>{Id}";
     }
 }

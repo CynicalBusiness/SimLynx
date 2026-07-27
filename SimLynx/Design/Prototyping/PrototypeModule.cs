@@ -11,6 +11,8 @@ namespace SimLynx.Design.Prototyping;
 public class PrototypeModule<TBaseSubject> : Module
     where TBaseSubject : class, IPrototypeSubject
 {
+    private static readonly string[] InjectableProps = [nameof(IPrototype.Base), nameof(IPrototype.IsAbstract)];
+
     /// <summary>
     /// The concrete prototype, as a generic type definition.
     /// </summary>
@@ -19,7 +21,7 @@ public class PrototypeModule<TBaseSubject> : Module
         get;
         init
         {
-            if (!value.IsGenericTypeDefinition || !value.IsAssignableTo(typeof(IPrototype<>)))
+            if (!value.IsGenericTypeDefinition || !value.IsGenericTypeOf(typeof(IPrototype<>)))
             {
                 throw new ArgumentException(
                     $"The provided type '{value}' must be a generic type definition that implements IPrototype<>."
@@ -63,7 +65,7 @@ public class PrototypeModule<TBaseSubject> : Module
         builder
             .RegisterGeneric(PrototypeImpl)
             .Keyed(typeof(TBaseSubject), typeof(IPrototype<>))
-            .PropertiesAutowired(PrototypePropertySelector.Instance)
+            .WithParameterizedProperties(InjectableProps)
             .InstancePerDependency();
     }
 }

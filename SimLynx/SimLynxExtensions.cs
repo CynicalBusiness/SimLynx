@@ -7,6 +7,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Autofac;
 using Autofac.Builder;
+using Autofac.Core;
 using SimLynx.Core;
 
 namespace SimLynx;
@@ -283,10 +284,34 @@ public static class SimLynxExtensions
                 .Lambda<Action<TInstance, TProperty>>(bodyExpr, instanceParamExpr, valueParamExpr)
                 .Compile();
         }
+
+        /// <summary>
+        /// Helper to create a setter action for the property, even if the property's setter is non-public or init-only.
+        /// </summary>
+        /// <returns>The setter action for the property.</returns>
+        /// <exception cref="ArgumentException">If the property does not have a setter nor init.</exception>
+        public Action<object, object?> CreatePropertySetter()
+        {
+            var setMethod =
+                @this.GetSetMethod(true)
+                ?? throw new ArgumentException(
+                    $"Property '{@this.Name}' does not have a setter nor init.",
+                    nameof(@this)
+                );
+
+            var instanceParamExpr = Expression.Parameter(typeof(object), "instance");
+            var valueParamExpr = Expression.Parameter(typeof(object), "value");
+            var bodyExpr = Expression.Call(
+                Expression.Convert(instanceParamExpr, @this.DeclaringType),
+                setMethod,
+                Expression.Convert(valueParamExpr, @this.PropertyType)
+            );
+            return Expression.Lambda<Action<object, object?>>(bodyExpr, instanceParamExpr, valueParamExpr).Compile();
+        }
     }
 
     extension<TLimit, TActivatorData, TRegistrationStyle>(
-        IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> builder
+        IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> @this
     )
     {
         /// <summary>
@@ -299,7 +324,7 @@ public static class SimLynxExtensions
         public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> IdentifiedBy<TService>(Symbol id)
             where TService : notnull
         {
-            return builder.Keyed<TService>(id);
+            return @this.Keyed<TService>(id);
         }
 
         /// <summary>
@@ -314,7 +339,57 @@ public static class SimLynxExtensions
             Type serviceType
         )
         {
-            return builder.Keyed(id, serviceType);
+            return @this.Keyed(id, serviceType);
+        }
+
+        /// <summary>
+        /// Configures the registration to wire properties via <see cref="NamedPropertyParameter"/> using the specified property selector.
+        /// </summary>
+        /// <param name="selector">The property selector used to determine which properties to inject.</param>
+        /// <returns>The updated registration builder.</returns>
+        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> WithParameterizedProperties(
+            IPropertySelector selector
+        )
+        {
+            return @this.ConfigurePipeline(pipeline =>
+            {
+                pipeline.Use(new ParameterizedPropertyMiddleware(selector));
+            });
+        }
+
+        /// <summary>
+        /// Configures the registration to wire properties via <see cref="NamedPropertyParameter"/> using the
+        /// specified <paramref name="propertyNames"/>.
+        /// </summary>
+        /// <param name="propertyNames">The names of the properties to inject.</param>
+        /// <returns>The updated registration builder.</returns>
+        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> WithParameterizedProperties(
+            IEnumerable<string> propertyNames
+        )
+        {
+            return @this.WithParameterizedProperties(new NamedPropertySelector(propertyNames));
+        }
+
+        /// <summary>
+        /// Configures the registration to wire properties via <see cref="NamedPropertyParameter"/> using the
+        /// specified <paramref name="propertyNames"/>.
+        /// </summary>
+        /// <param name="propertyNames">The names of the properties to inject.</param>
+        /// <returns>The updated registration builder.</returns>
+        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> WithParameterizedProperties(
+            params string[] propertyNames
+        )
+        {
+            return @this.WithParameterizedProperties(new NamedPropertySelector(propertyNames));
+        }
+
+        /// <summary>
+        /// Configures the registration to wire any property via <see cref="NamedPropertyParameter"/>.
+        /// </summary>
+        /// <returns>The updated registration builder.</returns>
+        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> WithParameterizedProperties()
+        {
+            return @this.WithParameterizedProperties(AnyPropertySelector.Instance);
         }
     }
 
