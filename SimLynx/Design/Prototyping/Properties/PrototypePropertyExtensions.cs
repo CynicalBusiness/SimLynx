@@ -33,8 +33,9 @@ public static class PrototypePropertyExtensions
         public IPropertyConfig<TSubject> GetProperty(string propertyName)
         {
             return @this.GetConfig<IPropertyConfig<TSubject>>(propertyName)
-                ?? throw new InvalidOperationException(
-                    $"The property '{propertyName}' on {@this.SubjectType} (for prototype {@this}) is not configurable."
+                ?? throw new ArgumentException(
+                    $"The property '{propertyName}' on {@this.SubjectType} (for prototype {@this}) is not configurable.",
+                    nameof(propertyName)
                 );
         }
 
@@ -70,8 +71,9 @@ public static class PrototypePropertyExtensions
             var propertyInfo = propertySelector.GetSelectedProperty();
 
             return @this.GetConfig<IPropertyConfig<TSubject>>(propertyInfo.Name) as PropertyConfig<TSubject, TValue>
-                ?? throw new InvalidOperationException(
-                    $"The property '{propertyInfo.Name}' on {@this.SubjectType} (for prototype {@this}) is not configurable."
+                ?? throw new ArgumentException(
+                    $"The property '{propertyInfo.Name}' on {@this.SubjectType} (for prototype {@this}) is not configurable.",
+                    nameof(propertySelector)
                 );
         }
     }

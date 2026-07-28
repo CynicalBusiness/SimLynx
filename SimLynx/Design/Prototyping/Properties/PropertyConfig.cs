@@ -223,6 +223,21 @@ public class PropertyConfig<TSubject, TValue>(PropertyInfo property)
         this.value = value;
     }
 
+    void IPropertyConfig<TSubject>.Configure(PropertyConfig<TSubject, object?>.ValueFunc valueFunc)
+    {
+        Configure(() => (TValue)valueFunc()!);
+    }
+
+    void IPropertyConfig<TSubject>.Configure(PropertyConfig<TSubject, object?>.ConfigurationFunc configurationFunc)
+    {
+        Configure(value => (TValue)configurationFunc(value)!);
+    }
+
+    void IPropertyConfig<TSubject>.Configure(Action<object?> action)
+    {
+        Configure(value => action(value));
+    }
+
     /// <inheritdoc cref="IPropertyConfig{TSubject}.CopyTo(IPropertyConfig{TSubject})"/>
     public void CopyTo(PropertyConfig<TSubject, TValue> other)
     {

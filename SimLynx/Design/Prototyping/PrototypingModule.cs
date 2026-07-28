@@ -20,7 +20,7 @@ public sealed class PrototypingModule : Module
         builder.RegisterPrototypeConfigSlot(
             new(PropertyConfigSlot.SLOT_ID, typeof(PropertyConfigSlot<>))
             {
-                ConfigTypes = [typeof(IPropertyConfig), typeof(IPropertyConfig<>), typeof(PropertyConfig<,>)],
+                ConfigTypes = [typeof(IPropertyConfig), typeof(IPropertyConfig<>)],
                 Priority = Priorities.High,
             }
         );

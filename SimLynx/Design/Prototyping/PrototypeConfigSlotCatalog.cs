@@ -233,7 +233,7 @@ public class PrototypeConfigSlotCatalog
             if (
                 container.TryResolveService(
                     serviceType,
-                    [new LooseTypedParameter(prototype, ceilingType: typeof(IPrototype<TSubject>))],
+                    [new CovariantTypedParameter(prototype, ceilingType: typeof(IPrototype<TSubject>))],
                     out var rawSlot
                 )
             )

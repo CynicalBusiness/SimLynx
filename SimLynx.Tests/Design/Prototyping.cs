@@ -98,6 +98,28 @@ public class Prototyping
         }
 
         [Fact]
+        public void Prototype_ProvidesPropertyConfigSlot()
+        {
+            var registry = Container.Resolve<PrototypeRegistry<TestSubject>>();
+            var prototype = registry.Configure<TestSubject>(OwnPrototypeId);
+
+            // valid: can get slot by ID or type, all should be the same instance
+            var slotById = prototype.GetSlot(PropertyConfigSlot.SLOT_ID);
+            var slotByType = prototype.GetSlot<IPropertyConfig<TestSubject>>();
+            var slotByBaseType = prototype.GetSlot<IPropertyConfig>();
+
+            Assert.Equal(slotById, slotByType);
+            Assert.Equal(slotById, slotByBaseType);
+
+            // valid: unknown slot ID or type returns null
+            var unknownSlotById = prototype.GetSlot(UnknownPrototypeId);
+            var unknownSlotByType = prototype.GetSlot<IPrototypeConfig>();
+
+            Assert.Null(unknownSlotById);
+            Assert.Null(unknownSlotByType);
+        }
+
+        [Fact]
         public void Compile_AppliesOwnPropertyConfigs()
         {
             var prototype = GetPrototype<TestSubject>(Container, OwnPrototypeId);
@@ -195,6 +217,44 @@ public class Prototyping
             Assert.Equal("hidden", subject.Hidden);
         }
 
+        [Fact]
+        public void Extensions_ProvideInheritanceChecks()
+        {
+            // valid: a prototype extends itself and its base prototypes
+            var prototype = GetPrototype<TestSubject>(Container, BasePrototypeId);
+            var derivedPrototype = GetPrototype<DerivedTestSubject>(
+                Container,
+                DerivedTypePrototypeId,
+                basePrototypeId: BasePrototypeId
+            );
+
+            Assert.True(derivedPrototype.Extends(derivedPrototype));
+            Assert.True(derivedPrototype.Extends(prototype));
+
+            // valid: a subject of a prototype is of its own prototype and its base prototypes
+            prototype.GetProperty(x => x.RequiredText).Configure(() => "required");
+            var subject = derivedPrototype.Compile().CreateInstance(Container);
+
+            Assert.True(subject.IsOf(derivedPrototype));
+            Assert.True(subject.IsOf(prototype));
+        }
+
+        [Fact]
+        public void Extensions_ProvideDirectPropertyAccessors()
+        {
+            var prototype = GetPrototype<TestSubject>(Container, OwnPrototypeId);
+
+            // valid: extensions provide a shortcut
+            prototype.GetProperty(x => x.RequiredText).Configure(() => "required");
+            prototype.GetProperty(nameof(TestSubject.NullableText)).Configure(() => "nullable");
+
+            Assert.Equal(typeof(int), prototype.GetProperty(nameof(TestSubject.Count)).ValueType);
+
+            // invalid: extensions throw if the property is not configurable or does not exist
+            Assert.Throws<ArgumentException>(() => prototype.GetProperty(x => x.NonConfigurable));
+            Assert.Throws<ArgumentException>(() => prototype.GetProperty("unknown"));
+        }
+
         private static IPrototype<TSubject> GetPrototype<TSubject>(
             ILifetimeScope scope,
             Symbol id,
@@ -246,8 +306,8 @@ public class Prototyping
 
     private class TestSubject : IPrototypeSubject
     {
-        public IPrototype Prototype => null!;
-        public required string RequiredText { get; set; }
+        public required IPrototype Prototype { get; init; }
+        public required string RequiredText { get; init; }
         public string? NullableText { get; set; } = "initial";
         public int Count { get; set; }
         public Options Options { get; set; } = null!;
@@ -256,6 +316,9 @@ public class Prototyping
         public string Hidden { get; private set; } = "initial";
 
         public string Text { get; set; } = "initial";
+
+        [Configurable(false)]
+        public int NonConfigurable { get; set; } = 0;
     }
 
     private class DerivedTestSubject : TestSubject;

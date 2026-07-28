@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using SimLynx.Core;
 
 namespace SimLynx.Design.Prototyping;
@@ -59,11 +60,29 @@ public class PrototypeConfigSlotDef
         {
             ArgumentNullException.ThrowIfNull(value, nameof(value));
 
+            var supportedConfigTypes = TypeDef
+                .GetGenericTypesOf(typeof(IPrototypeConfigSlotOf<>))
+                .Where(t => !t.IsGenericTypeDefinition)
+                .Select(t => t.GetGenericArguments()[0])
+                .ToArray();
+
             foreach (var type in value)
             {
                 if (type is null)
                 {
                     throw new ArgumentException("Config types cannot contain null values.", nameof(value));
+                }
+
+                if (
+                    !supportedConfigTypes.Any(t =>
+                        type.IsGenericTypeDefinition ? t.IsGenericTypeOf(type) : t.IsAssignableTo(type)
+                    )
+                )
+                {
+                    throw new ArgumentException(
+                        $"Config type {type} is not supported by slot type {TypeDef}. Supported config types are: {string.Join<Type>(", ", supportedConfigTypes)}",
+                        nameof(value)
+                    );
                 }
             }
 

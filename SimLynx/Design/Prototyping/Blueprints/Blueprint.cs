@@ -1,6 +1,7 @@
 using System.Linq;
 using Autofac;
 using Autofac.Core;
+using SimLynx.Core;
 
 namespace SimLynx.Design.Prototyping.Blueprints;
 
@@ -22,7 +23,9 @@ internal class Blueprint<TSubject>(BlueprintBuilder<TSubject> builder) : IBluepr
         var context = new BlueprintBuilder<TSubject>.BuildContext(baseOptions.Clone(), scope, Prototype.SubjectType);
         var parameters = injectionParameters.Concat(preCreateHandlers.SelectMany(handler => handler.Invoke(context)));
 
-        var instance = scope.Resolve<TSubject>(parameters);
+        var instance = scope.Resolve<TSubject>(
+            parameters.Prepend(new CovariantTypedParameter(Prototype, typeof(IPrototype)))
+        );
 
         foreach (var handler in postCreateHandlers)
         {

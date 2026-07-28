@@ -38,7 +38,6 @@ public interface IPropertyConfig : IPrototypeConfig
     /// May differ from <see cref="HasValue"/> if the property is able to set a default.
     /// </remarks>
     public bool CanSetValue { get; }
-
 }
 
 /// <summary>
@@ -52,4 +51,25 @@ public interface IPropertyConfig<TSubject> : IPropertyConfig, IPrototypeConfig<T
     /// </summary>
     /// <param name="other">The other config to copy to.</param>
     public void CopyTo(IPropertyConfig<TSubject> other);
+
+    /// <summary>
+    /// Configures the property with the provided <paramref name="configurationFunc"/>. The function is invoked with
+    /// the current value and should return a new or modified value to set for the property.
+    /// </summary>
+    /// <param name="configurationFunc">The configuration function to apply to the property.</param>
+    public void Configure(PropertyConfig<TSubject, object?>.ConfigurationFunc configurationFunc);
+
+    /// <summary>
+    /// Configures the property with the provided <paramref name="valueFunc"/>. The function is invoked to provide a
+    /// new value to set for the property, overriding any previous value or configuration for the property.
+    /// </summary>
+    /// <param name="valueFunc">The function to provide the new value for the property.</param>
+    public void Configure(PropertyConfig<TSubject, object?>.ValueFunc valueFunc);
+
+    /// <summary>
+    /// Configures the property with the provided <paramref name="action"/>. The action is invoked with the current
+    /// value and may modify it in place. Should only be used for mutable property types.
+    /// </summary>
+    /// <param name="action">The modification action to apply to the property.</param>
+    public void Configure(Action<object?> action);
 }
