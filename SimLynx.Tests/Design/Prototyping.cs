@@ -299,8 +299,8 @@ public class Prototyping
 
             builder.RegisterModule(new PrototypeModule<TestSubject>());
 
-            builder.RegisterType<TestSubject>().AsSelf();
-            builder.RegisterType<DerivedTestSubject>().AsSelf();
+            // builder.RegisterType<TestSubject>().AsSelf();
+            // builder.RegisterType<DerivedTestSubject>().AsSelf();
         }
     }
 

@@ -60,7 +60,7 @@ public class Hook<TPayload> : IHook<TPayload>, IDisposable
         {
             foreach (var handler in handlers)
             {
-                this.Subscribe(handler);
+                Subscribe(handler);
             }
         }
     }

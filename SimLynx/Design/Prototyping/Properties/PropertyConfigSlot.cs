@@ -12,7 +12,7 @@ public static class PropertyConfigSlot
     /// <summary>
     /// The preferred slot ID for property configs.
     /// </summary>
-    public static readonly Symbol SLOT_ID = "Properties";
+    public static readonly Symbol SLOT_ID = Symbol.For("Properties");
 }
 
 /// <summary>
@@ -27,6 +27,18 @@ public class PropertyConfigSlot<TSubject>(IPrototype<TSubject> prototype)
     public override void Configure(IBlueprintBuilder<TSubject> builder)
     {
         var effectiveConfigs = GetEffectiveConfigs(builder);
+
+        var unsetRequiredProperties = effectiveConfigs
+            .Values.Where(config => config.Property.IsRequired && !config.CanSetRequiredValue)
+            .ToArray();
+
+        if (unsetRequiredProperties.Length > 0)
+        {
+            throw new PrototypeCompilationException(
+                Prototype,
+                $"Required properties are not set: {string.Join(", ", unsetRequiredProperties.Select(c => c.Name))}"
+            );
+        }
 
         foreach (var config in effectiveConfigs.Values)
         {

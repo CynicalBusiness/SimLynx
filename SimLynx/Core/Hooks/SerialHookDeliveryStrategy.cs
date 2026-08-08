@@ -7,6 +7,9 @@ namespace SimLynx.Core.Hooks;
 /// A hook delivery strategy that delivers hook invocations to handlers in a serial manner, awaiting each handler's
 /// completion before moving to the next.
 /// </summary>
+/// <remarks>
+/// This strategy is used by default for most hooks unless configured otherwise.
+/// </remarks>
 public class SerialHookDeliveryStrategy : IHookDeliveryStrategy
 {
     /// <summary>

@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using Autofac;
-using Autofac.Core;
+using SimLynx.Core;
 using SimLynx.Design.Prototyping.Blueprints;
 
 namespace SimLynx.Design.Prototyping.Properties;
@@ -111,6 +109,9 @@ public class PropertyConfig<TSubject, TValue>(PropertyInfo property)
     public bool CanSetValue => HasReset || HasValue || defaultValueFunc.Value is not null;
 
     /// <inheritdoc/>
+    public bool CanSetRequiredValue => HasValue;
+
+    /// <inheritdoc/>
     public bool HasConfigurations => configurations.Count > 0;
 
     /// <inheritdoc/>
@@ -145,28 +146,25 @@ public class PropertyConfig<TSubject, TValue>(PropertyInfo property)
         }
 
         var didSetValue = false;
+
         var subjectParamExpr = Expression.Parameter(typeof(TSubject), "subject");
         var propertyExpr = Expression.Property(subjectParamExpr, Property);
 
         var valueFunc = value.HasValue ? value.Value : defaultValueFunc.Value;
         if (valueFunc is not null)
         {
-            if (Property.IsRequired)
+            if (Property.IsNativeRequired)
             {
-                // Autofac is responsible for required property injection, so we add our property via a parameter so that is used instead of resolving from container.
-                builder.InjectionParameters.Add(new PropertyValueParameter(Property, valueFunc));
+                // Autofac handles "native" required properties.
+                builder.InjectionParameters.Add(new SpecificPropertyProviderParameter(Property, (_, _) => valueFunc()));
             }
             else
             {
-                // For non-required properties Autofac (generally) won't touch, we make an expression ourselves
-                // Autofac may still try to resolve the property if some other selector (eg. PropertiesAutowired) is in play, but we have no way of knowing that here, so we're just going to have to step on it.
-                var valueProviderExpr = Expression.Invoke(Expression.Constant(valueFunc));
-                var assignExpr = Expression.Assign(propertyExpr, valueProviderExpr);
+                // otherwise, we set the value afterward ourselves
+                var assignExpr = Expression.Assign(propertyExpr, Expression.Invoke(Expression.Constant(valueFunc)));
                 var assignAction = Expression.Lambda<Action<TSubject>>(assignExpr, subjectParamExpr).Compile();
-
                 builder.ConfigureAfterCreate((context, subject) => assignAction.Invoke(subject));
             }
-
             didSetValue = true;
         }
 
@@ -276,30 +274,4 @@ public class PropertyConfig<TSubject, TValue>(PropertyInfo property)
 
     void IPropertyConfigState<TValue>.AddConfiguration(Func<TValue, TValue> configuration) =>
         Configure(value => configuration(value));
-
-    private class PropertyValueParameter(PropertyInfo property, ValueFunc valueFunc) : Parameter
-    {
-        public override bool CanSupplyValue(
-            ParameterInfo pi,
-            IComponentContext context,
-            [NotNullWhen(true)] out Func<object?>? valueProvider
-        )
-        {
-            ArgumentNullException.ThrowIfNull(pi, nameof(pi));
-            ArgumentNullException.ThrowIfNull(context, nameof(context));
-
-            if (
-                !pi.TryGetDeclaringProperty(out var prop)
-                || prop.Name != property.Name
-                || prop.PropertyType != property.PropertyType
-            )
-            {
-                valueProvider = null;
-                return false;
-            }
-
-            valueProvider = () => valueFunc();
-            return true;
-        }
-    }
 }

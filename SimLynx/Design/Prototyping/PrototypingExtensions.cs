@@ -1,10 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Reflection;
 using Autofac;
 using Autofac.Core.Registration;
-using SimLynx.Design.Prototyping.Properties;
 
 namespace SimLynx.Design.Prototyping;
 
@@ -13,27 +12,6 @@ namespace SimLynx.Design.Prototyping;
 /// </summary>
 public static class PrototypingExtensions
 {
-    extension(PropertyInfo @this)
-    {
-        /// <summary>
-        /// Indicates whether this property is configurable, meaning it can be set by a prototype.
-        /// </summary>
-        public bool IsPrototypeConfigurable
-        {
-            get
-            {
-                var setMethod = @this.SetMethod;
-                if (setMethod is null)
-                {
-                    return false;
-                }
-
-                var configurableAttribute = @this.GetCustomAttribute<ConfigurableAttribute>(inherit: true);
-                return configurableAttribute is null ? setMethod.IsPublic : configurableAttribute.IsConfigurable;
-            }
-        }
-    }
-
     extension(IPrototype @this)
     {
         /// <summary>

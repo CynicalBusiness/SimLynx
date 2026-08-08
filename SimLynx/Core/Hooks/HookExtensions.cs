@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 using Autofac;
 using Autofac.Builder;
 using Autofac.Core;
@@ -55,6 +56,29 @@ public static class HookExtensions
         )
         {
             return @this.Subscribe((payload, context) => targetHook.Invoke(mapFunc(payload), context), priority);
+        }
+    }
+
+    extension<TPayload>(IHookInvocable<TPayload> @this)
+    {
+        /// <summary>
+        /// Invokes the hook synchronously, blocking until all handlers have completed.
+        /// </summary>
+        /// <param name="payload">The payload to pass to the hook.</param>
+        /// <param name="context">The context to pass to the hook.</param>
+        public void InvokeSync(TPayload payload, HookContext context)
+        {
+            @this.Invoke(payload, context).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Invokes the hook synchronously, blocking until all handlers have completed.
+        /// </summary>
+        /// <param name="payload">The payload to pass to the hook.</param>
+        /// <param name="cancellationToken">The cancellation token to observe.</param>
+        public void InvokeSync(TPayload payload, CancellationToken cancellationToken = default)
+        {
+            @this.Invoke(payload, cancellationToken).GetAwaiter().GetResult();
         }
     }
 

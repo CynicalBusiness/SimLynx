@@ -1,5 +1,7 @@
 using System;
 using Autofac;
+using SimLynx.Core.Hooks;
+using SimLynx.Design.Prototyping.Blueprints;
 using SimLynx.Simulation;
 
 namespace SimLynx.Design.Prototyping;
@@ -44,10 +46,17 @@ public class PrototypeModule<TBaseSubject> : Module
         }
     } = typeof(Prototype<>);
 
+    /// <summary>
+    /// Handler to apply additional configuration to subject registrations for this subject type.
+    /// </summary>
+    public PrototypeSubjectRegistrationSource.SubjectRegistrationHandler? OnRegisterSubject { get; init; }
+
     /// <inheritdoc/>
     protected override void Load(ContainerBuilder builder)
     {
-        builder.RegisterSource(new PrototypeSubjectRegistrationSource<TBaseSubject>());
+        builder.RegisterSource(
+            new PrototypeSubjectRegistrationSource<TBaseSubject>() { OnRegisterSubject = OnRegisterSubject }
+        );
 
         builder
             .RegisterType<PrototypeRegistry<TBaseSubject>>()
@@ -65,7 +74,11 @@ public class PrototypeModule<TBaseSubject> : Module
         builder
             .RegisterGeneric(PrototypeImpl)
             .Keyed(typeof(TBaseSubject), typeof(IPrototype<>))
-            .WithParameterizedProperties(InjectableProps)
+            .PropertiesParameterized(InjectableProps)
             .InstancePerDependency();
+
+        // blueprints
+        builder.RegisterHook<OnCreateInstance>();
+        builder.RegisterHook<OnBeforeCreateInstance>();
     }
 }

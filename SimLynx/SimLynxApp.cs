@@ -84,7 +84,7 @@ public abstract class SimLynxApp : IContentPackage
 
         return new ContentPackageManifest()
         {
-            Id = thisType.Namespace ?? thisType.Name,
+            Id = Symbol.For(thisType.Namespace ?? thisType.Name),
             Version = thisAssemblyVersion is not null
                 ? SemVersion.FromVersion(thisAssemblyVersion)
                 : new SemVersion(0, 0, 1),

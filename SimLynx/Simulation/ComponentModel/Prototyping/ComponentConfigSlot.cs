@@ -18,7 +18,7 @@ public static class ComponentConfigSlot
     /// <summary>
     /// The slot ID for the component config slot.
     /// </summary>
-    public static readonly Symbol SLOT_ID = "Components";
+    public static readonly Symbol SLOT_ID = Symbol.For("Components");
 
     /// <summary>
     /// Attempts to parse a component config name into its component type and, if present, given name.

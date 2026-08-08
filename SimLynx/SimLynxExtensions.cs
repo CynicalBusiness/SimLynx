@@ -17,6 +17,16 @@ namespace SimLynx;
 /// </summary>
 public static class SimLynxExtensions
 {
+    /// <summary>
+    /// Delegate for <see cref="TrySelect{TItem, TResult}"/>
+    /// </summary>
+    /// <typeparam name="TItem"></typeparam>
+    /// <typeparam name="TResult"></typeparam>
+    /// <param name="item"></param>
+    /// <param name="result"></param>
+    /// <returns></returns>
+    public delegate bool TrySelectDelegate<TItem, TResult>(TItem item, [MaybeNullWhen(false)] out TResult result);
+
     /// <typeparam name="T">The type of elements in the source sequence.</typeparam>
     /// <param name="this">The source sequence.</param>
     extension<T>(IEnumerable<T> @this)
@@ -52,6 +62,24 @@ public static class SimLynxExtensions
         public void ForEach(Action<T> action)
         {
             @this.ForEach((item, _) => action(item));
+        }
+
+        /// <summary>
+        /// Attempts to select a value from each element in the source sequence using the specified selector function.
+        /// If the selector function returns <c>false</c> for an element, that element is skipped.
+        /// </summary>
+        /// <typeparam name="TResult">The type of the result value.</typeparam>
+        /// <param name="selector">The selector function</param>
+        /// <returns>An enumeration of successful selections</returns>
+        public IEnumerable<TResult> TrySelect<TResult>(TrySelectDelegate<T, TResult> selector)
+        {
+            foreach (var item in @this)
+            {
+                if (selector(item, out var result))
+                {
+                    yield return result;
+                }
+            }
         }
     }
 
@@ -245,6 +273,19 @@ public static class SimLynxExtensions
             );
 
         /// <summary>
+        /// Indicates whether or not this property is required on its type.
+        /// </summary>
+        /// <remarks>
+        /// This differs from <see cref="get_IsRequired(MemberInfo)"/> in that it only considers the
+        /// <see langword="required"/> modifier and nothing else, like Autofac.
+        /// </remarks>
+        public bool IsNativeRequired =>
+            @this.CustomAttributes.Any(attribute =>
+                // in case a down-stream consumer uses their own shim, or the compiler includes it itself, look by name
+                attribute.AttributeType.FullName == "System.Runtime.CompilerServices.RequiredMemberAttribute"
+            );
+
+        /// <summary>
         /// Helper to create a strongly-typed setter delegate for the property, even if the property's setter is
         /// non-public or init-only.
         /// </summary>
@@ -302,7 +343,7 @@ public static class SimLynxExtensions
             var instanceParamExpr = Expression.Parameter(typeof(object), "instance");
             var valueParamExpr = Expression.Parameter(typeof(object), "value");
             var bodyExpr = Expression.Call(
-                Expression.Convert(instanceParamExpr, @this.DeclaringType),
+                Expression.Convert(instanceParamExpr, @this.DeclaringType!),
                 setMethod,
                 Expression.Convert(valueParamExpr, @this.PropertyType)
             );
@@ -343,53 +384,45 @@ public static class SimLynxExtensions
         }
 
         /// <summary>
-        /// Configures the registration to wire properties via <see cref="NamedPropertyParameter"/> using the specified property selector.
+        /// Enables the injection of select properties via parameters using the provided <paramref name="middleware"/>
+        /// instance.
         /// </summary>
-        /// <param name="selector">The property selector used to determine which properties to inject.</param>
-        /// <returns>The updated registration builder.</returns>
-        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> WithParameterizedProperties(
-            IPropertySelector selector
+        /// <param name="middleware">The parameterized property middleware instance.</param>
+        /// <returns>This updated registration builder.</returns>
+        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> PropertiesParameterized(
+            ParameterizedPropertyMiddleware middleware
         )
         {
             return @this.ConfigurePipeline(pipeline =>
             {
-                pipeline.Use(new ParameterizedPropertyMiddleware(selector));
+                pipeline.Use(middleware);
             });
         }
 
         /// <summary>
-        /// Configures the registration to wire properties via <see cref="NamedPropertyParameter"/> using the
-        /// specified <paramref name="propertyNames"/>.
+        /// Enables the injection of select properties via parameters matching the provided
+        /// <paramref name="propertySelector"/>.
         /// </summary>
-        /// <param name="propertyNames">The names of the properties to inject.</param>
-        /// <returns>The updated registration builder.</returns>
-        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> WithParameterizedProperties(
+        /// <param name="propertySelector">The selector for properties.</param>
+        /// <returns>This updated registration builder.</returns>
+        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> PropertiesParameterized(
+            IPropertySelector propertySelector
+        )
+        {
+            return @this.PropertiesParameterized(new ParameterizedPropertyMiddleware(propertySelector));
+        }
+
+        /// <summary>
+        /// Enables the injection of select properties via parameters matching the provided
+        /// <paramref name="propertyNames"/>.
+        /// </summary>
+        /// <param name="propertyNames">The names of the properties to be injected via parameters.</param>
+        /// <returns>This updated registration builder.</returns>
+        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> PropertiesParameterized(
             IEnumerable<string> propertyNames
         )
         {
-            return @this.WithParameterizedProperties(new NamedPropertySelector(propertyNames));
-        }
-
-        /// <summary>
-        /// Configures the registration to wire properties via <see cref="NamedPropertyParameter"/> using the
-        /// specified <paramref name="propertyNames"/>.
-        /// </summary>
-        /// <param name="propertyNames">The names of the properties to inject.</param>
-        /// <returns>The updated registration builder.</returns>
-        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> WithParameterizedProperties(
-            params string[] propertyNames
-        )
-        {
-            return @this.WithParameterizedProperties(new NamedPropertySelector(propertyNames));
-        }
-
-        /// <summary>
-        /// Configures the registration to wire any property via <see cref="NamedPropertyParameter"/>.
-        /// </summary>
-        /// <returns>The updated registration builder.</returns>
-        public IRegistrationBuilder<TLimit, TActivatorData, TRegistrationStyle> WithParameterizedProperties()
-        {
-            return @this.WithParameterizedProperties(AnyPropertySelector.Instance);
+            return @this.PropertiesParameterized(new NamedPropertySelector(propertyNames));
         }
     }
 

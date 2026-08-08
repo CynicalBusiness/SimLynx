@@ -17,6 +17,17 @@ namespace SimLynx;
 ///     <item><term>Unique</term> <description>Each symbol is unique, even if created with the same name.</description></item>
 /// </list>
 /// </summary>
+/// <remarks>
+/// A Symbol's main advantage over a string is its comparison speed: comparing two symbols for equality is a single
+/// integer comparison, and hashing is essentially free (since the Symbol's value is returned as-is). Compare that
+/// to strings, which require a full string comparison and hash computation. This makes symbols ideal for use as
+/// dictionary keys or for other scenarios where equality checks are frequent.
+/// <br/>
+/// It should be avoided, however, to build symbols "on-the-fly", as named Symbol *creation* is not free:
+/// <see cref="For"/> runs a fast but non-trivial hash computation and can block threads during lookup dictionary
+/// access. Consider defining relevant symbols in advance, such as `static` members, and reusing them instead of
+/// creating new symbols at runtime.
+/// </remarks>
 public readonly struct Symbol : IEquatable<Symbol>
 {
     /// <summary>
@@ -53,12 +64,12 @@ public readonly struct Symbol : IEquatable<Symbol>
     public static bool operator !=(Symbol left, Symbol right) => !left.Equals(right);
 
     /// <summary>
-    /// Implicit conversion from string to Symbol, creating or retrieving a named symbol with the given name.
+    /// Explicit conversion from string to Symbol, creating or retrieving a named symbol with the given name.
     /// <br/>
     /// This is equivalent to calling <see cref="For(string)"/> with the provided name.
     /// </summary>
     /// <param name="name">The name of the symbol.</param>
-    public static implicit operator Symbol(string name) => For(name);
+    public static explicit operator Symbol(string name) => For(name);
 
     /// <summary>
     /// Implicit conversion from Symbol to string, retrieving the <see cref="Name"/> of the symbol.
@@ -76,6 +87,9 @@ public readonly struct Symbol : IEquatable<Symbol>
     /// Implicit conversion from Symbol to EventId, creating a new EventId with the symbol's value and name.
     /// </summary>
     /// <param name="symbol">The symbol.</param>
+    [Obsolete(
+        "Implicit conversion from Symbol to EventId is deprecated. Symbol.Value is not stable and should not be used as an EventId."
+    )]
     public static implicit operator EventId(Symbol symbol) => new(symbol.Value, symbol.Name);
 
     private static readonly ConcurrentDictionary<int, string> nameLookup = new() { [Empty.Value] = string.Empty };

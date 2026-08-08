@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace SimLynx.Design.Prototyping.Properties;
 
@@ -75,6 +76,31 @@ public static class PrototypePropertyExtensions
                     $"The property '{propertyInfo.Name}' on {@this.SubjectType} (for prototype {@this}) is not configurable.",
                     nameof(propertySelector)
                 );
+        }
+    }
+
+    extension(PropertyInfo @this)
+    {
+        /// <summary>
+        /// Indicates whether this property is configurable, meaning it can be set by a prototype.
+        /// </summary>
+        /// <remarks>
+        /// A property is considered configurable if it has a public setter, or the behavior is explicitly defined
+        /// using the <see cref="ConfigurableAttribute"/>.
+        /// </remarks>
+        public bool IsPrototypeConfigurable
+        {
+            get
+            {
+                var setMethod = @this.SetMethod;
+                if (setMethod is null)
+                {
+                    return false;
+                }
+
+                var configurableAttribute = @this.GetCustomAttribute<ConfigurableAttribute>(inherit: true);
+                return configurableAttribute is null ? setMethod.IsPublic : configurableAttribute.IsConfigurable;
+            }
         }
     }
 }

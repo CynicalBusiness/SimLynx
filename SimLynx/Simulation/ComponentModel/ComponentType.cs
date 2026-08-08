@@ -127,5 +127,8 @@ internal class ComponentType<TComponent> : IComponentType<TComponent>
 {
     public static ComponentType<TComponent> Instance { get; } = new();
 
-    public Type Type { get; } = typeof(TComponent);
+    private readonly IMetaType<TComponent> metaType = MetaType.For<TComponent>();
+
+    public Type Type => metaType.Type;
+    public TypeDictionary Metadata => metaType.Metadata;
 }
