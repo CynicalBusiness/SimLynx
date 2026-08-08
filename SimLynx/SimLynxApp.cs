@@ -38,6 +38,7 @@ public abstract class SimLynxApp(ILifetimeScope scope, ContentPackageManifest ma
     /// <returns>A task that represents the application's lifetime.</returns>
     public virtual Task RunAsync(CancellationToken cancellationToken)
     {
+        ContentAttributionRegistry.Current = new(this);
         return Scope.BeginPhase(CreatePhasePlan(), cancellationToken);
     }
 

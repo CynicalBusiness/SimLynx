@@ -1,8 +1,10 @@
+using System.Collections.Immutable;
 using System.Linq;
 using Autofac;
 using Autofac.Core;
 using SimLynx.Core;
 using SimLynx.Core.Hooks;
+using SimLynx.Discovery.Content;
 
 namespace SimLynx.Design.Prototyping.Blueprints;
 
@@ -15,8 +17,8 @@ internal class Blueprint<TSubject>(BlueprintBuilder<TSubject> builder) : IBluepr
     private readonly TypeDictionary baseOptions = builder.Options.Clone();
     private readonly Parameter[] injectionParameters = [.. builder.InjectionParameters];
 
-    /// <inheritdoc/>
     public IPrototype<TSubject> Prototype { get; } = builder.Prototype;
+    public ImmutableArray<IContentProvider> Attributions { get; } = builder.Attributions;
 
     /// <inheritdoc/>
     public TSubject CreateInstance(ILifetimeScope scope)

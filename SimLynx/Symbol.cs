@@ -27,6 +27,8 @@ namespace SimLynx;
 /// <see cref="For"/> runs a fast but non-trivial hash computation and can block threads during lookup dictionary
 /// access. Consider defining relevant symbols in advance, such as `static` members, and reusing them instead of
 /// creating new symbols at runtime.
+/// <br/>
+/// By convention, symbol descriptions/names, if any, should be <c>camelCase</c>, and are case-sensitive.
 /// </remarks>
 public readonly struct Symbol : IEquatable<Symbol>
 {
@@ -36,14 +38,14 @@ public readonly struct Symbol : IEquatable<Symbol>
     public const int MAX_NAME_LENGTH = 128;
 
     /// <summary>
-    /// The name used for unknown symbol names.
-    /// </summary>
-    public const string UNKNOWN_NAME = "<unknown>";
-
-    /// <summary>
     /// The prefix character used to denote symbol names in string representations.
     /// </summary>
-    public const string SYMBOL_PREFIX = "#";
+    public const string PREFIX = "@";
+
+    /// <summary>
+    /// The prefix used to denote unique symbols in string representations.
+    /// </summary>
+    public const string UNIQUE_PREFIX = "~";
 
     /// <summary>
     /// The empty symbol instance (an unnamed unique symbol).
@@ -52,6 +54,12 @@ public readonly struct Symbol : IEquatable<Symbol>
     /// This property is equivalent to <c>default(Symbol)</c>, and is provided for convenience and readability.
     /// </remarks>
     public static readonly Symbol Empty = default;
+
+    /// <summary>
+    /// A unique symbol that can be used to identify objects that are internal to their respective owners and
+    /// are not intended to be seen/used by external consumers.
+    /// </summary>
+    public static readonly Symbol Internal = new("internal");
 
     /// <summary>
     /// Equality operator for symbols.
@@ -72,10 +80,10 @@ public readonly struct Symbol : IEquatable<Symbol>
     public static explicit operator Symbol(string name) => For(name);
 
     /// <summary>
-    /// Implicit conversion from Symbol to string, retrieving the <see cref="Name"/> of the symbol.
+    /// Implicit conversion from Symbol to string, retrieving the <see cref="Description"/> of the symbol.
     /// </summary>
     /// <param name="symbol">The symbol.</param>
-    public static implicit operator string(Symbol symbol) => symbol.Name;
+    public static implicit operator string(Symbol symbol) => symbol.ToString();
 
     /// <summary>
     /// Implicit conversion from Symbol to int, retrieving the <see cref="Value"/> of the symbol.
@@ -90,9 +98,9 @@ public readonly struct Symbol : IEquatable<Symbol>
     [Obsolete(
         "Implicit conversion from Symbol to EventId is deprecated. Symbol.Value is not stable and should not be used as an EventId."
     )]
-    public static implicit operator EventId(Symbol symbol) => new(symbol.Value, symbol.Name);
+    public static implicit operator EventId(Symbol symbol) => new(symbol.Value, symbol.Description);
 
-    private static readonly ConcurrentDictionary<int, string> nameLookup = new() { [Empty.Value] = string.Empty };
+    private static readonly ConcurrentDictionary<int, string> nameRegistry = new() { [Empty.Value] = string.Empty };
 
     private static int _uniqueValueIdx = -1;
 
@@ -103,22 +111,27 @@ public readonly struct Symbol : IEquatable<Symbol>
     /// <returns>The named <see cref="Symbol"/> instance.</returns>
     public static Symbol For(string name)
     {
+        if (string.IsNullOrEmpty(name))
+        {
+            return Empty;
+        }
+
         int hash = ComputeHashCode(name);
-        nameLookup.TryAdd(hash, name);
+        nameRegistry.TryAdd(hash, name);
         return new Symbol(hash);
     }
 
-    private static int ComputeHashCode(string name)
+    private static int ComputeHashCode(string str)
     {
-        if (string.IsNullOrEmpty(name))
+        if (string.IsNullOrEmpty(str))
         {
             return 0;
         }
-        if (name.Length > MAX_NAME_LENGTH)
+        if (str.Length > MAX_NAME_LENGTH)
         {
             throw new ArgumentException(
-                $"Symbol name '{name}' exceeds maximum length of {MAX_NAME_LENGTH} characters.",
-                nameof(name)
+                $"Symbol name '{str}' exceeds maximum length of {MAX_NAME_LENGTH} characters.",
+                nameof(str)
             );
         }
         unchecked
@@ -126,7 +139,7 @@ public readonly struct Symbol : IEquatable<Symbol>
             // https://mojoauth.com/hashing/fast-hash-in-c/
             // speed and stability are more important than cryptographic quality here
             int hash = 17;
-            foreach (char c in name)
+            foreach (char c in str)
             {
                 hash = hash * 31 + c;
             }
@@ -137,30 +150,34 @@ public readonly struct Symbol : IEquatable<Symbol>
     /// <summary>
     /// The numerical value of the symbol.
     /// </summary>
-    public int Value { get; private init; }
+    /// <remarks>
+    /// Of note, the "value" of a symbol is an implementation detail and not guaranteed to be stable across different
+    /// runs of the application, and so should not be used for serialization. Named symbols should be
+    /// stored/transmitted by name, and unique symbols are, by design, not serializable.
+    /// </remarks>
+    public int Value { get; }
 
     /// <summary>
     /// Creates a new unique <see cref="Symbol"/>.
     /// </summary>
+    /// <remarks>
+    /// Two new unique symbols, will never be considered equal.
+    /// </remarks>
     public Symbol()
         : this(Interlocked.Decrement(ref _uniqueValueIdx)) // should cause an overflow exception if we ever run out of unique symbols
     { }
 
     /// <summary>
-    /// Creates a new unique <see cref="Symbol"/>, optionally with a name.
+    /// Creates a new unique <see cref="Symbol"/>, optionally with a description.
     /// </summary>
     /// <remarks>
-    /// This creates a <em>unique</em> symbol with its own name, and will still create a new unique symbol even if the
-    /// same name is provided. To create a <em>named</em> symbol, use <see cref="For(string)"/>.
+    /// Two new unique symbols, even if created with the same description, will never be considered equal.
     /// </remarks>
-    /// <param name="name">The name of the symbol</param>
-    public Symbol(string? name)
+    /// <param name="description">The description of the symbol</param>
+    public Symbol(string? description)
         : this()
     {
-        if (!string.IsNullOrEmpty(name))
-        {
-            nameLookup.TryAdd(Value, name);
-        }
+        Description = description;
     }
 
     private Symbol(int value)
@@ -171,17 +188,13 @@ public readonly struct Symbol : IEquatable<Symbol>
     /// <summary>
     /// Indicates whether this symbol is unique (not named).
     /// </summary>
-    public bool IsUnique => Value < 0;
+    [MemberNotNullWhen(false, nameof(Description))]
+    public bool IsUnique => Value <= 0;
 
     /// <summary>
-    /// Indicates whether this symbol is named.
+    /// The description of this symbol, if any.
     /// </summary>
-    public bool IsNamed => Value >= 0;
-
-    /// <summary>
-    /// Retrieves the name of this symbol.
-    /// </summary>
-    public string Name => nameLookup.GetValueOrDefault(Value, UNKNOWN_NAME);
+    public string? Description { get; }
 
     /// <summary>
     /// Indicates whether this symbol is equal to another symbol.
@@ -202,7 +215,7 @@ public readonly struct Symbol : IEquatable<Symbol>
     /// <inheritdoc/>
     public override string ToString()
     {
-        return $"{SYMBOL_PREFIX}{(IsUnique ? "~" : "")}{Name}";
+        return PREFIX + (IsUnique ? UNIQUE_PREFIX + (Description ?? $"<{Value:X}>") : Description);
     }
 
     /// <inheritdoc/>
@@ -219,7 +232,7 @@ public readonly struct Symbol : IEquatable<Symbol>
         /// <summary>
         /// Gets the singleton instance of the <see cref="ValueComparer"/> class.
         /// </summary>
-        public static ValueComparer Instance { get; } = new();
+        public static ValueComparer Default { get; } = new();
 
         private ValueComparer() { }
 

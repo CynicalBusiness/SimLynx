@@ -6,21 +6,19 @@ namespace SimLynx.Simulation.ComponentModel.Prototyping;
 
 /// <inheritdoc cref="IComponentConfig{TSubject, TComponent}"/>
 public class ComponentConfig<TSubject, TComponent>(PrototypeResolver<Component> prototypeResolver, string? givenName)
-    : IComponentConfig<TSubject, TComponent>
+    : PrototypeConfig<TSubject>(ComponentConfigSlot.GetConfigName(ComponentTypes.For<TComponent>(), givenName)),
+        IComponentConfig<TSubject, TComponent>
     where TSubject : Component
     where TComponent : Component
 {
     /// <inheritdoc/>
-    public string Name { get; } = ComponentConfigSlot.GetConfigName(ComponentTypes.For<TComponent>(), givenName);
-
-    /// <inheritdoc/>
-    public bool IsEmpty => ComponentPrototype is null;
+    public override bool IsEmpty => ComponentPrototype is null;
 
     /// <inheritdoc/>
     public ComponentPrototype<TComponent>? ComponentPrototype { get; private set; }
 
     /// <inheritdoc/>
-    public bool Apply(IBlueprintBuilder<TSubject> builder)
+    public override bool Apply(IBlueprintBuilder<TSubject> builder)
     {
         if (IsEmpty)
         {
@@ -32,16 +30,10 @@ public class ComponentConfig<TSubject, TComponent>(PrototypeResolver<Component> 
     }
 
     /// <inheritdoc/>
-    public void Clear()
+    public override void Clear()
     {
+        base.Clear();
         ComponentPrototype = null;
-    }
-
-    /// <inheritdoc/>
-    public void Reset()
-    {
-        // TODO stub
-        throw new NotImplementedException();
     }
 
     /// <summary>

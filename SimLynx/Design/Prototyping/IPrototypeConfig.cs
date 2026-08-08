@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using System.ComponentModel;
 using SimLynx.Design.Prototyping.Blueprints;
+using SimLynx.Discovery.Content;
 
 namespace SimLynx.Design.Prototyping;
 
@@ -17,6 +19,11 @@ public interface IPrototypeConfig
     /// Whether this configuration is empty, meaning it has no effect on the prototype or its blueprint.
     /// </summary>
     public bool IsEmpty { get; }
+
+    /// <summary>
+    /// The content providers attributed to having configured this config, if any.
+    /// </summary>
+    public IEnumerable<IContentProvider> Attributions { get; }
 
     /// <summary>
     /// Clears this config.

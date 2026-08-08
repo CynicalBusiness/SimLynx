@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using Autofac.Core;
+using SimLynx.Discovery.Content;
 
 namespace SimLynx.Design.Prototyping.Blueprints;
 
@@ -25,6 +27,11 @@ public interface IBlueprintBuilder<out TSubject>
     /// The prototype this builder is building a blueprint for.
     /// </summary>
     public IPrototype<TSubject> Prototype { get; }
+
+    /// <summary>
+    /// Gets a deduplicated enumeration of all attributions for this prototype and its ancestors, starting from the root prototype and ending with this prototype, in order of application.
+    /// </summary>
+    public ImmutableArray<IContentProvider> Attributions { get; }
 
     /// <summary>
     /// The action to be invoked after a new instance of the subject is created.

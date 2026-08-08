@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
@@ -644,6 +645,44 @@ public static class SimLynxExtensions
         public IEnumerable<Type> GetTypes()
         {
             return @this.GetAssemblies().SelectMany(assembly => assembly.GetTypes());
+        }
+    }
+
+    extension(Assembly @this)
+    {
+        /// <summary>
+        /// Returns an enumeration of all assemblies involved in the current call stack. The resulting enumeration
+        /// will never yield the same assembly twice <em>in a row</em>, but may yield the same assembly multiple times
+        /// if it appears in different parts of the call stack.
+        /// </summary>
+        /// <returns>An enumerable of all assemblies involved in the current call stack.</returns>
+        /// <seealso cref="GetDistinctCallingAssemblies"/>
+        public static IEnumerable<Assembly> GetCallingAssemblies()
+        {
+            Assembly? lastAssembly = null;
+            var stack = new StackTrace(false);
+
+            foreach (var frame in stack.GetFrames())
+            {
+                var assembly = frame.GetMethod()?.DeclaringType?.Assembly;
+                if (assembly is not null && assembly != lastAssembly)
+                {
+                    yield return assembly;
+                    lastAssembly = assembly;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Returns an enumeration of all distinct assemblies involved in the current call stack. The resulting
+        /// enumeration will never yield the same assembly twice, even if it appears in different parts of the call
+        /// stack.
+        /// </summary>
+        /// <returns>An enumerable of all distinct assemblies involved in the current call stack.</returns>
+        /// <seealso cref="GetCallingAssemblies"/>
+        public static IEnumerable<Assembly> GetDistinctCallingAssemblies()
+        {
+            return Assembly.GetCallingAssemblies().Distinct();
         }
     }
 }

@@ -1,4 +1,6 @@
+using System.Collections.Immutable;
 using Autofac;
+using SimLynx.Discovery.Content;
 
 namespace SimLynx.Design.Prototyping.Blueprints;
 
@@ -12,6 +14,11 @@ public interface IBlueprint
     /// The prototype this blueprint was compiled from.
     /// </summary>
     public IPrototype Prototype { get; }
+
+    /// <summary>
+    /// Attributions for this blueprint.
+    /// </summary>
+    public ImmutableArray<IContentProvider> Attributions { get; }
 
     /// <summary>
     /// Creates a new instance of the subject object for this blueprint's <see cref="Prototype"/>.

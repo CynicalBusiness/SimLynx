@@ -58,7 +58,8 @@ public static class PropertyConfig
 /// <typeparam name="TValue">The type value of the property</typeparam>
 /// <param name="property">The property info for the prototype property.</param>
 public class PropertyConfig<TSubject, TValue>(PropertyInfo property)
-    : IPropertyConfig<TSubject>,
+    : PrototypeConfig<TSubject>(property.Name),
+        IPropertyConfig<TSubject>,
         IPropertyConfigState<TValue>
     where TSubject : class, IPrototypeSubject
 {
@@ -97,9 +98,6 @@ public class PropertyConfig<TSubject, TValue>(PropertyInfo property)
     public PropertyInfo Property { get; } = property;
 
     /// <inheritdoc/>
-    public string Name => Property.Name;
-
-    /// <inheritdoc/>
     public Type ValueType => typeof(TValue);
 
     /// <inheritdoc/>
@@ -115,30 +113,18 @@ public class PropertyConfig<TSubject, TValue>(PropertyInfo property)
     public bool HasConfigurations => configurations.Count > 0;
 
     /// <inheritdoc/>
-    public bool IsEmpty => !HasValue && !HasConfigurations;
-
-    /// <summary>
-    /// Indicates this config contains a reset
-    /// </summary>
-    public bool HasReset { get; private set; } = false;
+    public override bool IsEmpty => !HasValue && !HasConfigurations;
 
     /// <inheritdoc/>
-    public void Clear()
+    public override void Clear()
     {
+        base.Clear();
         configurations.Clear();
         value = Maybe<ValueFunc>.None;
-        HasReset = false;
     }
 
     /// <inheritdoc/>
-    public void Reset()
-    {
-        Clear();
-        HasReset = true;
-    }
-
-    /// <inheritdoc/>
-    public virtual bool Apply(IBlueprintBuilder<TSubject> builder)
+    public override bool Apply(IBlueprintBuilder<TSubject> builder)
     {
         if (IsEmpty)
         {
@@ -191,6 +177,7 @@ public class PropertyConfig<TSubject, TValue>(PropertyInfo property)
     /// <param name="configuration">The configuration to add.</param>
     public void Configure(ConfigurationFunc configuration)
     {
+        ApplyAttribution();
         configurations.Add(configuration);
     }
 
@@ -200,6 +187,7 @@ public class PropertyConfig<TSubject, TValue>(PropertyInfo property)
     /// <param name="configuration">The configuration action to add.</param>
     public void Configure(Action<TValue> configuration)
     {
+        ApplyAttribution();
         configurations.Add(value =>
         {
             configuration(value);

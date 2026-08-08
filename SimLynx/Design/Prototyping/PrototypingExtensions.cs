@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Autofac;
 using Autofac.Core.Registration;
+using SimLynx.Discovery.Content;
 
 namespace SimLynx.Design.Prototyping;
 
@@ -153,6 +154,32 @@ public static class PrototypingExtensions
                 ancestors = ancestors.Append(@this);
             }
             return ancestors;
+        }
+
+        /// <summary>
+        /// Gets a deduplicated enumeration of all attributions for this prototype, not including those of its
+        /// ancestors.
+        /// </summary>
+        /// <returns>The enumeration of own attributions for this prototype.</returns>
+        public IEnumerable<IContentProvider> GetOwnAttributions()
+        {
+            return @this
+                .Slots.SelectMany(s => s.GetOwn())
+                .SelectMany(c => c.Attributions)
+                .Distinct(ContentProviderComparer.Default);
+        }
+
+        /// <summary>
+        /// Gets a deduplicated enumeration of all attributions for this prototype and its ancestors, starting
+        /// from the root prototype and ending with this prototype, in order of application.
+        /// </summary>
+        /// <returns>The deduplicated enumeration of all attributions for this prototype and its ancestors.</returns>
+        public IEnumerable<IContentProvider> GetAllAttributions()
+        {
+            return @this
+                .GetAncestorsFromRoot(includeSelf: true)
+                .SelectMany(p => p.GetOwnAttributions())
+                .Distinct(ContentProviderComparer.Default);
         }
     }
 

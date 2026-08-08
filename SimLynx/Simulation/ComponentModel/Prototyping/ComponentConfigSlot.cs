@@ -11,11 +11,6 @@ namespace SimLynx.Simulation.ComponentModel.Prototyping;
 public static class ComponentConfigSlot
 {
     /// <summary>
-    /// Separator character used to separate the component type name from its given name.
-    /// </summary>
-    public const char CONFIG_NAME_SEPARATOR = ':';
-
-    /// <summary>
     /// The slot ID for the component config slot.
     /// </summary>
     public static readonly Symbol SLOT_ID = Symbol.For("Components");
@@ -33,7 +28,7 @@ public static class ComponentConfigSlot
         out string? givenName
     )
     {
-        var sepIdx = inputName.IndexOf(CONFIG_NAME_SEPARATOR);
+        var sepIdx = inputName.IndexOf(TypeKey.SEPARATOR);
 
         string typeName;
         if (sepIdx < 0)
@@ -60,9 +55,8 @@ public static class ComponentConfigSlot
     /// <returns>The config name for the component config.</returns>
     public static string GetConfigName(IComponentType componentType, string? givenName = null)
     {
-        var typeName = componentType.Type.FullName ?? componentType.Type.Name;
-
-        return givenName is null ? typeName : $"{typeName}{CONFIG_NAME_SEPARATOR}{givenName}";
+        var givenTag = givenName is null ? Symbol.Empty : Symbol.For(givenName);
+        return new TypeKey(componentType.Type, givenTag).ToString();
     }
 }
 

@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using Autofac;
 using Autofac.Core;
+using SimLynx.Discovery.Content;
 
 namespace SimLynx.Design.Prototyping.Blueprints;
 
@@ -30,6 +32,9 @@ public class BlueprintBuilder<TSubject>(IPrototype<TSubject> prototype) : IBluep
 
     /// <inheritdoc/>
     public IPrototype<TSubject> Prototype { get; } = prototype;
+
+    /// <inheritdoc/>
+    public ImmutableArray<IContentProvider> Attributions => [.. Prototype.GetAllAttributions()];
 
     /// <inheritdoc/>
     public IBlueprint<TSubject> Build()

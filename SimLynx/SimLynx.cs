@@ -12,12 +12,6 @@ namespace SimLynx;
 public static class SimLynx
 {
     /// <summary>
-    /// A unique symbol that can be used to identify objects that are internal to their respective owners and
-    /// are not intended to be seen/used by external consumers.
-    /// </summary>
-    public static readonly Symbol InternalTag = new("internal");
-
-    /// <summary>
     /// Registers the SimLynx services with the given container builder, using a new <typeparamref name="TApp"/> instance.
     /// </summary>
     /// <typeparam name="TApp">The type of the SimLynx app.</typeparam>
