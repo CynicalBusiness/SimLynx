@@ -1,5 +1,3 @@
-using SimLynx.Core;
-
 namespace SimLynx.Simulation.ComponentModel;
 
 /// <summary>

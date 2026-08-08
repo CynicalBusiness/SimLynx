@@ -1,7 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
-using Semver;
 using SimLynx.Core.Phasing;
 using SimLynx.Design;
 using SimLynx.Discovery;
@@ -18,24 +17,14 @@ namespace SimLynx;
 /// For most use-cases, your main application class should extend from this class.
 /// <br/>
 /// </remarks>
-public abstract class SimLynxApp : IContentPackage
+/// <param name="scope">The Autofac scope for the application.</param>
+/// <param name="manifest">The content package manifest for the main application.</param>
+public abstract class SimLynxApp(ILifetimeScope scope, ContentPackageManifest manifest) : ContentPackage(manifest)
 {
-    /// <summary>
-    /// Initializes a new app instance.
-    /// </summary>
-    protected SimLynxApp(ILifetimeScope scope)
-    {
-        Scope = scope;
-        Manifest = CreateContentManifest();
-    }
-
-    /// <inheritdoc/>
-    public ContentPackageManifest Manifest { get; }
-
     /// <summary>
     /// The Autofac scope for this application.
     /// </summary>
-    protected ILifetimeScope Scope { get; }
+    protected ILifetimeScope Scope { get; } = scope;
 
     /// <summary>
     /// Runs the application, returning a task that represents its lifetime. The returned task should complete when the
@@ -71,23 +60,5 @@ public abstract class SimLynxApp : IContentPackage
     protected virtual void ConfigurePhasePlan(PhasePlan.Builder builder)
     {
         builder.Then<DiscoveryPhase>().Then<DesignPhase>().Then<SimulationPhase>();
-    }
-
-    /// <summary>
-    /// Override to customize the internal content manifest for the main app.
-    /// </summary>
-    /// <returns>The content package manifest.</returns>
-    protected virtual ContentPackageManifest CreateContentManifest()
-    {
-        var thisType = GetType();
-        var thisAssemblyVersion = thisType.Assembly.GetName().Version;
-
-        return new ContentPackageManifest()
-        {
-            Id = Symbol.For(thisType.Namespace ?? thisType.Name),
-            Version = thisAssemblyVersion is not null
-                ? SemVersion.FromVersion(thisAssemblyVersion)
-                : new SemVersion(0, 0, 1),
-        };
     }
 }

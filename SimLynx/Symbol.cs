@@ -210,4 +210,35 @@ public readonly struct Symbol : IEquatable<Symbol>
     {
         return Value;
     }
+
+    /// <summary>
+    /// Compares two symbols by their <see cref="Value"/> property, and provides equality comparison and hashing for symbols.
+    /// </summary>
+    public class ValueComparer : IComparer<Symbol>, IEqualityComparer<Symbol>
+    {
+        /// <summary>
+        /// Gets the singleton instance of the <see cref="ValueComparer"/> class.
+        /// </summary>
+        public static ValueComparer Instance { get; } = new();
+
+        private ValueComparer() { }
+
+        /// <inheritdoc/>
+        public int Compare(Symbol x, Symbol y)
+        {
+            return x.Value.CompareTo(y.Value);
+        }
+
+        /// <inheritdoc/>
+        public bool Equals(Symbol x, Symbol y)
+        {
+            return x.Equals(y);
+        }
+
+        /// <inheritdoc/>
+        public int GetHashCode(Symbol obj)
+        {
+            return obj.GetHashCode();
+        }
+    }
 }
