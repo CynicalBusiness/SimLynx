@@ -646,6 +646,184 @@ public static class SimLynxExtensions
         {
             return @this.GetAssemblies().SelectMany(assembly => assembly.GetTypes());
         }
+
+        private bool TryGetTypeByAssemblyQualifiedName(string assemblyQualifiedName, [NotNullWhen(true)] out Type? type)
+        {
+            type = Type.GetType(assemblyQualifiedName, throwOnError: false, ignoreCase: false);
+            return type is not null;
+        }
+
+        private bool TryGetTypeByFullName(string fullName, [NotNullWhen(true)] out Type? type)
+        {
+            foreach (var assembly in @this.GetAssemblies())
+            {
+                type = assembly.GetType(fullName, throwOnError: false, ignoreCase: false);
+                if (type is not null)
+                {
+                    return true;
+                }
+            }
+
+            type = null;
+            return false;
+        }
+
+        private bool TryGetTypeBySimpleName(string simpleName, [NotNullWhen(true)] out Type? type)
+        {
+            foreach (var assembly in @this.GetAssemblies())
+            {
+                type = assembly.GetTypes().FirstOrDefault(t => t.Name == simpleName);
+                if (type is not null)
+                {
+                    return true;
+                }
+            }
+
+            type = null;
+            return false;
+        }
+
+        /// <summary>
+        /// Attempts to find a type by a given <paramref name="typeName"/> in all loaded assemblies in this domain. The
+        /// name may be type's <see cref="MemberInfo.Name"/>, <see cref="Type.FullName"/>, string representation
+        /// (as from <see cref="Type.ToString"/>), an assembly-qualified name, or a "class name like"
+        /// (i.e. <c>MyClass&lt;T&gt;</c> or <c>Dictionary&lt;,&gt;</c>). If multiple types match the given name, the first one found will be
+        /// returned.
+        /// </summary>
+        /// <remarks>
+        /// This method may return a concrete type, generic or otherwise, or a generic type definition, depending on
+        /// the input.
+        /// <br/>
+        /// If this method successfully finds a generic type and all its generic parameters, but those parameters
+        /// fail to satisfy the generic type's constraints, this method will throw the same
+        /// <see cref="ArgumentException"/> that would be thrown by <see cref="Type.MakeGenericType(Type[])"/>.
+        /// </remarks>
+        /// <param name="typeName">The name of the type to find.</param>
+        /// <param name="type">The type if found; otherwise, null.</param>
+        /// <returns>True if the type was found; otherwise, false.</returns>
+        public bool TryFindType(string typeName, [NotNullWhen(true)] out Type? type)
+        {
+            if (typeName.Contains('<'))
+            {
+                // angle bracket means this is a C# style generic type, which is a user thing.
+                // we run it back through with standard brackets as the parsing rules are the same otherwise
+                return @this.TryFindType(typeName.Replace('<', '[').Replace('>', ']'), out type);
+            }
+
+            var bracketIdx = typeName.IndexOf('[');
+            if (bracketIdx >= 0)
+            {
+                // a bracket means this is a generic type, so its more complicated.
+                if (typeName[bracketIdx + 1] == '[')
+                {
+                    // second bracket means this is a "FullName" string, and the generics are fully-qualified.
+                    // this can be fed straight to Type.GetType or Assembly.GetType in this form
+                    return @this.TryGetTypeByAssemblyQualifiedName(typeName, out type)
+                        || @this.TryGetTypeByFullName(typeName, out type);
+                }
+                else
+                {
+                    // single bracket is a `ToString` style, meaning generics are present but not assembly-qualified OR this is a definition.
+                    // start by finding the generic type definition...
+                    var genericDefTypeName = typeName[..bracketIdx];
+                    var genericArgsStr = typeName[(bracketIdx + 1)..^1]; // also drop the closing bracket
+
+                    var genericArgNames = new Lazy<List<string>>(() =>
+                    {
+                        List<string> argNames = [];
+
+                        int startIdx = 0;
+                        int subGenericDepth = 0;
+                        for (var i = 0; i < genericArgsStr.Length; i++)
+                        {
+                            switch (genericArgsStr[i])
+                            {
+                                case '[':
+                                    subGenericDepth++;
+                                    break;
+                                case ']':
+                                    subGenericDepth--;
+                                    break;
+                                case ',':
+                                    if (subGenericDepth == 0)
+                                    {
+                                        argNames.Add(startIdx == i ? string.Empty : genericArgsStr[startIdx..i].Trim());
+                                        startIdx = i + 1;
+                                    }
+                                    break;
+                            }
+                        }
+                        argNames.Add(genericArgsStr[startIdx..].Trim());
+
+                        return argNames;
+                    });
+
+                    if (!genericDefTypeName.Contains('`'))
+                    {
+                        // if there's no backtick, we have to infer the arity of the generic type for the search to work
+                        // count commas at top-level depth
+                        genericDefTypeName += $"`{genericArgNames.Value.Count}";
+                    }
+
+                    if (!@this.TryFindType(genericDefTypeName, out var genericDefType))
+                    {
+                        // no def means no type, bail
+                        type = null;
+                        return false;
+                    }
+
+                    // now try to pull out each generic argument
+                    var firstGenericArgName = genericArgNames.Value[0];
+                    if (
+                        string.IsNullOrEmpty(firstGenericArgName)
+                        || firstGenericArgName == genericDefType.GetGenericArguments()[0].Name
+                    )
+                    {
+                        // if the first generic argument is empty or matches the def's first generic argument, this is a definition
+                        // partial closings are not valid in C#, so we can successfully bail here
+                        type = genericDefType;
+                        return true;
+                    }
+
+                    Type[] genericTypeArgs = new Type[genericArgNames.Value.Count];
+                    for (var i = 0; i < genericArgNames.Value.Count; i++)
+                    {
+                        var genericArgName = genericArgNames.Value[i];
+                        if (string.IsNullOrEmpty(genericArgName))
+                        {
+                            // mixed empties are invalid, bail
+                            type = null;
+                            return false;
+                        }
+
+                        if (@this.TryFindType(genericArgName, out var genericArgType))
+                        {
+                            // good find, keep going
+                            genericTypeArgs[i] = genericArgType;
+                            continue;
+                        }
+
+                        // if we can't find the type, bail
+                        type = null;
+                        return false;
+                    }
+
+                    // make the generic type, letting constraint issues throw
+                    type = genericDefType.MakeGenericType(genericTypeArgs);
+                    return true;
+                }
+            }
+
+            if (typeName.Contains(','))
+            {
+                // if we have a comma, we're assembly-qualified and can be fed straight to Type.GetType
+                type = Type.GetType(typeName, throwOnError: false, ignoreCase: false);
+                return type is not null;
+            }
+
+            // otherwise, try to find a type by name in all loaded assemblies
+            return @this.TryGetTypeByFullName(typeName, out type) || @this.TryGetTypeBySimpleName(typeName, out type);
+        }
     }
 
     extension(Assembly @this)
