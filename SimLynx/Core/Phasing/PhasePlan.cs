@@ -93,6 +93,12 @@ public class PhasePlan : IEnumerable<PhasePlan.Entry>
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
+    /// <inheritdoc/>
+    public override string ToString()
+    {
+        return $"{nameof(PhasePlan)}{{{string.Join<Entry>(" > ", Entries)}}}";
+    }
+
     /// <summary>
     /// An entry in a phase plan.
     /// </summary>
@@ -143,6 +149,12 @@ public class PhasePlan : IEnumerable<PhasePlan.Entry>
         /// The ID of the phase.
         /// </summary>
         public string PhaseName { get; }
+
+        /// <inheritdoc/>
+        public override string ToString()
+        {
+            return $"{PhaseName}({PhaseType})";
+        }
     }
 
     /// <summary>

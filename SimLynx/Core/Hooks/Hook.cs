@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace SimLynx.Core.Hooks;
 
@@ -14,7 +15,7 @@ namespace SimLynx.Core.Hooks;
 /// This class is thread-safe for (un)subscription and invocation.
 /// </remarks>
 /// <typeparam name="TPayload">The type of payload the hook carries.</typeparam>
-public class Hook<TPayload> : IHook<TPayload>, IDisposable
+public partial class Hook<TPayload> : IHook<TPayload>, IDisposable
 {
     private readonly SortedDictionary<sbyte, LinkedList<IHookHandler<TPayload>>> _handlerMap = new(
         PriorityComparer.Default
@@ -46,12 +47,19 @@ public class Hook<TPayload> : IHook<TPayload>, IDisposable
     /// </summary>
     protected readonly IHookDeliveryStrategy deliveryStrategy;
 
+    private readonly ILogger<Hook<TPayload>>? logger;
+
     /// <summary>
     /// Creates a new hook with the given delivery strategy and initial handlers.
     /// </summary>
     /// <param name="deliveryStrategy">The strategy to use for delivering hook invocations to subscribers.</param>
     /// <param name="handlers">The initial handlers to subscribe to this hook.</param>
-    public Hook(IHookDeliveryStrategy deliveryStrategy, IEnumerable<IHookHandler<TPayload>>? handlers = null)
+    /// <param name="logger">The logger instance.</param>
+    public Hook(
+        IHookDeliveryStrategy deliveryStrategy,
+        IEnumerable<IHookHandler<TPayload>>? handlers = null,
+        ILogger<Hook<TPayload>>? logger = null
+    )
     {
         ArgumentNullException.ThrowIfNull(deliveryStrategy);
         this.deliveryStrategy = deliveryStrategy;
@@ -63,6 +71,8 @@ public class Hook<TPayload> : IHook<TPayload>, IDisposable
                 Subscribe(handler);
             }
         }
+
+        this.logger = logger;
     }
 
     /// <summary>
@@ -100,6 +110,7 @@ public class Hook<TPayload> : IHook<TPayload>, IDisposable
             _lock.ExitReadLock();
         }
 
+        LogEvent.HookInvoking(logger, nameof(Hook<>), typeof(TPayload));
         var stopwatch = Stopwatch.StartNew();
 
         // TODO investigate SynchronizationContext and TaskScheduler to better handle these invocations
@@ -109,11 +120,13 @@ public class Hook<TPayload> : IHook<TPayload>, IDisposable
         }
         catch (Exception ex)
         {
+            LogEvent.HookInvokeError(logger, nameof(Hook<>), typeof(TPayload), stopwatch.Elapsed, ex);
             OnInvokeError?.Invoke(payload, context, ex);
             throw;
         }
 
         stopwatch.Stop();
+        LogEvent.HookInvoked(logger, nameof(Hook<>), typeof(TPayload), stopwatch.Elapsed);
         OnAfterInvoke?.Invoke(payload, context);
     }
 
@@ -170,5 +183,59 @@ public class Hook<TPayload> : IHook<TPayload>, IDisposable
     {
         cancellation.Cancel();
         cancellation.Dispose();
+    }
+
+    /// <inheritdoc/>
+    public override string ToString()
+    {
+        return $"Hook<{typeof(TPayload)}>";
+    }
+
+    /// <summary>
+    /// <see cref="Hook{TPayload}"/> log events.
+    /// </summary>
+    public static partial class LogEvent
+    {
+        /// <summary>
+        /// Event ID for a hook being invoked.
+        /// </summary>
+        public const int HOOK_INVOKING = 1;
+
+        [LoggerMessage(
+            EventId = HOOK_INVOKING,
+            Level = LogLevel.Debug,
+            Message = "Invoking hook: {hookName}<{payloadType}>"
+        )]
+        internal static partial void HookInvoking(ILogger? logger, string hookName, Type payloadType);
+
+        /// <summary>
+        /// Event ID for a hook having been invoked.
+        /// </summary>
+        public const int HOOK_INVOKED = 2;
+
+        [LoggerMessage(
+            EventId = HOOK_INVOKED,
+            Level = LogLevel.Debug,
+            Message = "Hook invoked: {hookName}<{payloadType}>, took {elapsed}"
+        )]
+        internal static partial void HookInvoked(ILogger? logger, string hookName, Type payloadType, TimeSpan elapsed);
+
+        /// <summary>
+        /// Event ID for an error occurring during hook invocation.
+        /// </summary>
+        public const int HOOK_INVOKE_ERROR = 3;
+
+        [LoggerMessage(
+            EventId = HOOK_INVOKE_ERROR,
+            Level = LogLevel.Error,
+            Message = "Exception in hook: {hookName}<{payloadType}> (after {elapsed})"
+        )]
+        internal static partial void HookInvokeError(
+            ILogger? logger,
+            string hookName,
+            Type payloadType,
+            TimeSpan elapsed,
+            Exception exception
+        );
     }
 }

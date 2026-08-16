@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Autofac.Features.AttributeFilters;
+using Microsoft.Extensions.Logging;
 using SimLynx.Design.Prototyping.Blueprints;
 
 namespace SimLynx.Design.Prototyping;
@@ -13,8 +14,10 @@ namespace SimLynx.Design.Prototyping;
 /// Registry of prototypes.
 /// </summary>
 /// <typeparam name="TBaseSubject">The base type of the subject for which this registry is storing prototypes.</typeparam>
-public class PrototypeRegistry<TBaseSubject>(PrototypeResolver<TBaseSubject> resolver)
-    : IReadOnlyDictionary<Symbol, IPrototype<TBaseSubject>>
+public partial class PrototypeRegistry<TBaseSubject>(
+    PrototypeResolver<TBaseSubject> resolver,
+    ILogger<PrototypeRegistry<TBaseSubject>>? logger
+) : IReadOnlyDictionary<Symbol, IPrototype<TBaseSubject>>
     where TBaseSubject : class, IPrototypeSubject
 {
     /// <summary>
@@ -158,8 +161,9 @@ public class PrototypeRegistry<TBaseSubject>(PrototypeResolver<TBaseSubject> res
         try
         {
             var prototype = resolver.Resolve<TSubject>(id, isAbstract, basePrototype);
-
             _prototypes[id] = prototype;
+
+            LogEvent.PrototypeAdded(logger, GetHashCode(), prototype);
             OnPrototypeAdded?.Invoke(prototype);
 
             return prototype;
@@ -191,8 +195,12 @@ public class PrototypeRegistry<TBaseSubject>(PrototypeResolver<TBaseSubject> res
     /// <summary>
     /// Factory for creating <see cref="PrototypeRegistry{TBaseSubject}"/> instances.
     /// </summary>
+    /// <param name="logger">Logger to use for logging within the registry.</param>
     /// <param name="factoryFunc">The DI-provided injected factory function.</param>
-    public class Factory([KeyFilter(Factory.TRANSIENT_REGISTRY_NAME)] Func<PrototypeResolver<TBaseSubject>> factoryFunc)
+    public class Factory(
+        [KeyFilter(Factory.TRANSIENT_REGISTRY_NAME)] Func<PrototypeResolver<TBaseSubject>> factoryFunc,
+        ILogger<PrototypeRegistry<TBaseSubject>>? logger
+    )
     {
         /// <summary>
         /// Registration name for transient prototype registries, which can be used to create more registries of the same subject type.
@@ -203,6 +211,43 @@ public class PrototypeRegistry<TBaseSubject>(PrototypeResolver<TBaseSubject> res
         /// Creates a new <see cref="PrototypeRegistry{TBaseSubject}"/> using the provided factory function.
         /// </summary>
         /// <returns>The newly created <see cref="PrototypeRegistry{TBaseSubject}"/>.</returns>
-        public PrototypeRegistry<TBaseSubject> Create() => new(factoryFunc());
+        public PrototypeRegistry<TBaseSubject> Create() => new(factoryFunc(), logger);
+    }
+
+    /// <summary>
+    /// <see cref="PrototypeRegistry{TBaseSubject}"/> log events.
+    /// </summary>
+    public static partial class LogEvent
+    {
+        /// <summary>
+        /// Event ID for a prototype being added to the registry.
+        /// </summary>
+        public const int PROTOTYPE_ADDED = 1;
+
+        [LoggerMessage(
+            EventId = PROTOTYPE_ADDED,
+            Level = LogLevel.Debug,
+            Message = "[{registryId:X}] Prototype added: {prototypeId} (SubjectType: {subjectType}, IsAbstract: {isAbstract}, BaseId: {baseId})"
+        )]
+        internal static partial void PrototypeAdded(
+            ILogger? logger,
+            int registryId,
+            Symbol prototypeId,
+            Type subjectType,
+            bool isAbstract,
+            Symbol? baseId
+        );
+
+        internal static void PrototypeAdded(ILogger? logger, int registryId, IPrototype prototype)
+        {
+            PrototypeAdded(
+                logger,
+                registryId,
+                prototype.Id,
+                prototype.SubjectType,
+                prototype.IsAbstract,
+                prototype.Base?.Id
+            );
+        }
     }
 }
