@@ -15,11 +15,11 @@ public class PrototypeConfigSlotDef
     /// <param name="slotId">ID of the slot.</param>
     /// <param name="typeDef">Open-generic type definition of the slot.</param>
     /// <exception cref="ArgumentException">If the slot type or symbol is invalid</exception>
-    public PrototypeConfigSlotDef(Symbol slotId, Type typeDef)
+    public PrototypeConfigSlotDef(Identifier slotId, Type typeDef)
     {
-        if (slotId == Symbol.Empty)
+        if (!slotId.IsSpecified)
         {
-            throw new ArgumentException("Slot ID cannot be empty.", nameof(slotId));
+            throw new ArgumentException("Slot ID cannot be empty or unspecified.", nameof(slotId));
         }
 
         if (!typeDef.IsGenericTypeDefinition || !typeDef.IsGenericTypeOf(typeof(IPrototypeConfigSlotFor<>)))
@@ -37,12 +37,18 @@ public class PrototypeConfigSlotDef
     /// <summary>
     /// ID of the configured slot.
     /// </summary>
-    public Symbol Id { get; }
+    public Identifier Id { get; }
 
     /// <summary>
     /// Open-generic type definition of the slot, to be closed with a specific subject type.
     /// </summary>
     public Type TypeDef { get; }
+
+    /// <summary>
+    /// Indicates this slot should be eagerly initialized when the prototype is created, rather than lazily when
+    /// a config is first requested from it.
+    /// </summary>
+    public bool Eager { get; init; } = false;
 
     /// <summary>
     /// Additional types that can be used to resolve the config slot configured by this entry.

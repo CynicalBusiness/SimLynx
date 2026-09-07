@@ -8,12 +8,12 @@ namespace SimLynx.Design.Prototyping;
 /// <summary>
 /// A single configuration for a prototype.
 /// </summary>
-public interface IPrototypeConfig
+public interface IPrototypeConfig : ICopyable<IPrototypeConfig>
 {
     /// <summary>
-    /// The name of this configuration, unique for the config's slot.
+    /// The ID of this configuration, unique for the config's slot.
     /// </summary>
-    public string Name { get; }
+    public Identifier Name { get; }
 
     /// <summary>
     /// Whether this configuration is empty, meaning it has no effect on the prototype or its blueprint.
@@ -48,6 +48,17 @@ public interface IPrototypeConfig
     /// To simply clear this particular config, use <see cref="Clear"/> instead.
     /// </remarks>
     public void Reset();
+
+    /// <summary>
+    /// Adds an attribution to this config attributing the given <paramref name="provider"/>.
+    /// </summary>
+    /// <param name="provider">The provider to attribute.</param>
+    public void Attribute(IContentProvider provider);
+
+    /// <summary>
+    /// Validates this configuration, throwing an exception if it is invalid in its current state.
+    /// </summary>
+    public void Validate();
 }
 
 /// <summary>

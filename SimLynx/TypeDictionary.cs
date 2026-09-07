@@ -6,26 +6,87 @@ using System.Diagnostics.CodeAnalysis;
 namespace SimLynx;
 
 /// <summary>
-/// Dictionary which maps a strong type to a value.
+/// Dictionary which maps a type to a value.
 /// </summary>
 /// <remarks>
 /// Only the exact type (including generics) is used for storage/lookup, not any base types or interfaces.
 /// </remarks>
-public class TypeDictionary : IReadOnlyDictionary<TypeKey, object>, ICloneable<TypeDictionary>
+/// <typeparam name="TLimit">The type to which the dictionary is limited.</typeparam>
+/// <param name="comparer">The comparer to use for comparing <see cref="TypeKey"/> instances.</param>
+public class TypeDictionary<TLimit>(IEqualityComparer<TypeKey>? comparer = null)
+    : ITypeDictionary<TLimit>,
+        ICloneable<TypeDictionary<TLimit>>
 {
-    private readonly Dictionary<TypeKey, object> _dictionary = [];
+    internal readonly Dictionary<TypeKey, TLimit> _dictionary = new(comparer ?? TypeKey.Comparer.Default);
+
+    /// <summary>
+    /// Creates a new <see cref="TypeDictionary{T}"/> with the default comparer.
+    /// </summary>
+    public TypeDictionary()
+        : this(comparer: null) { }
+
+    /// <summary>
+    /// Creates a new <see cref="TypeDictionary{T}"/> with the specified comparer, copying all entries from the
+    /// specified <paramref name="source"/> dictionary.
+    /// </summary>
+    /// <param name="source">The source dictionary to copy entries from.</param>
+    /// <param name="comparer">The comparer to use for comparing <see cref="TypeKey"/> instances.</param>
+    public TypeDictionary(IReadOnlyTypeDictionary<TLimit> source, IEqualityComparer<TypeKey>? comparer = null)
+        : this(comparer)
+    {
+        foreach (var kvp in source)
+        {
+            _dictionary[kvp.Key] = kvp.Value;
+        }
+    }
 
     /// <inheritdoc/>
-    public object this[TypeKey key] => _dictionary[key];
+    public TLimit this[TypeKey key]
+    {
+        get => _dictionary[key];
+        set
+        {
+            if (!key.Type.IsAssignableTo(typeof(TLimit)))
+            {
+                throw new ArgumentException(
+                    $"The type '{key.Type}' is not assignable to the dictionary limit type '{typeof(TLimit)}'.",
+                    nameof(key)
+                );
+            }
+
+            var valueType = value?.GetType();
+            if (valueType is null)
+            {
+                // value types won't ever be null so we only enter this block for reference types
+                _dictionary[key] = default!;
+                return;
+            }
+
+            if (!valueType.IsAssignableTo(key.Type))
+            {
+                throw new ArgumentException(
+                    $"The value of type '{valueType}' is not assignable to the key type '{key.Type}'.",
+                    nameof(value)
+                );
+            }
+
+            _dictionary[key] = value;
+        }
+    }
 
     /// <inheritdoc/>
     public IEnumerable<TypeKey> Keys => _dictionary.Keys;
 
     /// <inheritdoc/>
-    public IEnumerable<object> Values => _dictionary.Values;
+    public IEnumerable<TLimit> Values => _dictionary.Values;
 
     /// <inheritdoc/>
     public int Count => _dictionary.Count;
+
+    /// <summary>
+    /// Gets the comparer used to compare <see cref="TypeKey"/> instances in this dictionary.
+    /// </summary>
+    public IEqualityComparer<TypeKey> Comparer => _dictionary.Comparer;
 
     /// <inheritdoc/>
     public bool ContainsKey(TypeKey key)
@@ -33,241 +94,118 @@ public class TypeDictionary : IReadOnlyDictionary<TypeKey, object>, ICloneable<T
         return _dictionary.ContainsKey(key);
     }
 
-    /// <summary>
-    /// Gets whether this dictionary contains a <typeparamref name="T"/> value.
-    /// </summary>
-    /// <typeparam name="T">The type to check for in the dictionary.</typeparam>
-    /// <returns>True if the dictionary contains a value for the type <typeparamref name="T"/>, otherwise false.</returns>
-    public bool ContainsKey<T>()
-    {
-        return _dictionary.ContainsKey(new TypeKey(typeof(T)));
-    }
-
-    /// <summary>
-    /// Gets whether this dictionary contains a <typeparamref name="T"/> value with the specified <paramref name="tag"/>.
-    /// </summary>
-    /// <typeparam name="T">The type to check for in the dictionary.</typeparam>
-    /// <param name="tag">The tag associated with the type.</param>
-    /// <returns>True if the dictionary contains a value for the type <typeparamref name="T"/> with the specified tag, otherwise false.</returns>
-    public bool ContainsKey<T>(Symbol tag)
-    {
-        return _dictionary.ContainsKey(new TypeKey(typeof(T), tag));
-    }
-
     /// <inheritdoc/>
-    public IEnumerator<KeyValuePair<TypeKey, object>> GetEnumerator()
-    {
-        return _dictionary.GetEnumerator();
-    }
-
-#pragma warning disable CS8767 // IReadOnlyDictionary lacks nullability annotations, so this ends up throwing a warning
-    /// <inheritdoc/>
-    public bool TryGetValue(TypeKey key, [MaybeNullWhen(false)] out object value)
+#pragma warning disable CS8767 // IReadOnlyDictionary has missing nullability attributes
+    public bool TryGetValue(TypeKey key, [MaybeNullWhen(false)] out TLimit value)
+#pragma warning restore CS8767
     {
         return _dictionary.TryGetValue(key, out value);
     }
-#pragma warning restore CS8767
 
-    /// <summary>
-    /// Gets a <typeparamref name="T"/> value from the dictionary.
-    /// </summary>
-    /// <typeparam name="T">The type of the value to get from the dictionary.</typeparam>
-    /// <param name="value">When this method returns, contains the value associated with the specified type, if the type is found; otherwise, the default value for the type.</param>
-    /// <returns>True if the dictionary contains a value for the specified type; otherwise, false.</returns>
-    public bool TryGet<T>([MaybeNullWhen(false)] out T value)
+    /// <inheritdoc/>
+    public void Set<T>(Symbol tag, T value)
+        where T : TLimit
     {
-        return TryGet<T>(Symbol.Empty, out value);
-    }
-
-    /// <summary>
-    /// Gets a <typeparamref name="T"/> value from the dictionary with the specified <paramref name="tag"/>.
-    /// </summary>
-    /// <typeparam name="T">The type of the value to get from the dictionary.</typeparam>
-    /// <param name="tag">The tag associated with the type.</param>
-    /// <param name="value">When this method returns, contains the value associated with the specified type and tag, if the type is found; otherwise, the default value for the type.</param>
-    /// <returns>True if the dictionary contains a value for the specified type and tag; otherwise, false.</returns>
-    public bool TryGet<T>(Symbol tag, [MaybeNullWhen(false)] out T value)
-    {
-        if (_dictionary.TryGetValue(new TypeKey(typeof(T), tag), out var obj))
-        {
-            value = (T)obj;
-            return true;
-        }
-
-        value = default!;
-        return false;
-    }
-
-    /// <summary>
-    /// Gets a <typeparamref name="T"/> value from the dictionary, or adds a new value using the provided factory if it
-    /// does not exist.
-    /// <br/>
-    /// Returns <c>true</c> if the value was added, <c>false</c> if it already existed. In either case,
-    /// <paramref name="value"/> will contain the value from the dictionary.
-    /// </summary>
-    /// <typeparam name="T">The type of the value to get or add in the dictionary.</typeparam>
-    /// <param name="tag">The tag associated with the type.</param>
-    /// <param name="value">When this method returns, contains the value associated with the specified type and tag, if the type is found; otherwise, a new instance of the type.</param>
-    /// <param name="factory">The factory function to create a new value if it does not exist.</param>
-    /// <returns>True if the value was added, false if it already existed.</returns>
-    public bool GetOrAdd<T>(Symbol tag, out T value, Func<T> factory)
-    {
-        if (!TryGet(tag, out value!))
-        {
-            value = factory();
-            _dictionary[new TypeKey(typeof(T), tag)] = value!;
-            return true;
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// Gets a <typeparamref name="T"/> value from the dictionary, or adds a new value using the provided factory if
-    /// it does not exist.
-    /// <br/>
-    /// Returns <c>true</c> if the value was added, <c>false</c> if it already existed. In either case,
-    /// <paramref name="value"/> will contain the value from the dictionary.
-    /// </summary>
-    /// <typeparam name="T">The type of the value to get or add in the dictionary.</typeparam>
-    /// <param name="value">When this method returns, contains the value associated with the specified type, if the type is found; otherwise, a new instance of the type.</param>
-    /// <param name="factory">The factory function to create a new value if it does not exist.</param>
-    /// <returns>True if the value was added, false if it already existed.</returns>
-    public bool GetOrAdd<T>(out T value, Func<T> factory)
-    {
-        if (!TryGet(out value!))
-        {
-            value = factory();
-            _dictionary[typeof(T)] = value!;
-            return true;
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// Gets a <typeparamref name="T"/> value from the dictionary, or adds a new value using the default constructor if
-    /// it does not exist.
-    /// <br/>
-    /// Returns <c>true</c> if the value was added, <c>false</c> if it already existed. In either case,
-    /// <paramref name="value"/> will contain the value from the dictionary.
-    /// </summary>
-    /// <typeparam name="T">The type of the value to get or add in the dictionary.</typeparam>
-    /// <param name="tag">The tag associated with the type.</param>
-    /// <param name="value">When this method returns, contains the value associated with the specified type and tag, if
-    /// the type is found; otherwise, a new instance of the type.</param>
-    /// <returns>True if the value was added, false if it already existed.</returns>
-    public bool GetOrAdd<T>(Symbol tag, out T value)
-        where T : new()
-    {
-        return GetOrAdd(tag, out value, () => new T());
-    }
-
-    /// <summary>
-    /// Gets a <typeparamref name="T"/> value from the dictionary, or adds a new value using the default constructor if
-    /// it does not exist.
-    /// <br/>
-    /// Returns <c>true</c> if the value was added, <c>false</c> if it already existed. In either case,
-    /// <paramref name="value"/> will contain the value from the dictionary.
-    /// </summary>
-    /// <typeparam name="T">The type of the value to get or add in the dictionary.</typeparam>
-    /// <param name="value">When this method returns, contains the value associated with the specified type, if the type is found; otherwise, a new instance of the type.</param>
-    /// <returns>True if the value was added, false if it already existed.</returns>
-    public bool GetOrAdd<T>(out T value)
-        where T : new()
-    {
-        return GetOrAdd(out value, () => new T());
-    }
-
-    /// <summary>
-    /// Gets a <typeparamref name="T"/> value from the dictionary, or adds a new value using the provided factory if it
-    /// does not exist.
-    /// </summary>
-    /// <typeparam name="T">The type of the value to get or add in the dictionary.</typeparam>
-    /// <param name="tag">The tag associated with the type.</param>
-    /// <param name="factory">The factory function to create a new value if it does not exist.</param>
-    /// <returns>The existing or newly added value of type <typeparamref name="T"/>.</returns>
-    public T GetOrAdd<T>(Symbol tag, Func<T> factory)
-    {
-        GetOrAdd(tag, out T value, factory);
-        return value;
-    }
-
-    /// <summary>
-    /// Gets a <typeparamref name="T"/> value from the dictionary, or adds a new value using the provided factory if
-    /// it does not exist.
-    /// </summary>
-    /// <typeparam name="T">The type of the value to get or add in the dictionary.</typeparam>
-    /// <param name="factory">The factory function to create a new value if it does not exist.</param>
-    /// <returns>The existing or newly added value of type <typeparamref name="T"/>.</returns>
-    public T GetOrAdd<T>(Func<T> factory)
-    {
-        GetOrAdd(out T value, factory);
-        return value;
-    }
-
-    /// <summary>
-    /// Gets a <typeparamref name="T"/> value from the dictionary, or adds a new value using the default constructor
-    /// if it does not exist.
-    /// </summary>
-    /// <typeparam name="T">The type of the value to get or add in the dictionary.</typeparam>
-    /// <param name="tag">The tag associated with the type.</param>
-    /// <returns>The existing or newly added value of type <typeparamref name="T"/>.</returns>
-    public T GetOrAdd<T>(Symbol tag)
-        where T : new()
-    {
-        return GetOrAdd(tag, () => new T());
-    }
-
-    /// <summary>
-    /// Gets a <typeparamref name="T"/> value from the dictionary, or adds a new value using the default constructor if
-    /// it does not exist.
-    /// </summary>
-    /// <typeparam name="T">The type of the value to get or add in the dictionary.</typeparam>
-    /// <returns>The existing or newly added value of type <typeparamref name="T"/>.</returns>
-    public T GetOrAdd<T>()
-        where T : new()
-    {
-        return GetOrAdd(() => new T());
-    }
-
-    /// <summary>
-    /// Adds or updates a value in the dictionary for the specified type <typeparamref name="T"/> and
-    /// <paramref name="tag"/>.
-    /// </summary>
-    /// <typeparam name="T">The type of the value to add or update in the dictionary.</typeparam>
-    /// <param name="tag">The tag associated with the type.</param>
-    /// <param name="value">The value to add or update in the dictionary.</param>
-    /// <returns>The value that was added or updated.</returns>
-    public T Put<T>(Symbol tag, T value)
-    {
-        _dictionary[new TypeKey(typeof(T), tag)] = value!;
-        return value;
-    }
-
-    /// <summary>
-    /// Adds or updates a value in the dictionary for the specified type <typeparamref name="T"/>.
-    /// </summary>
-    /// <typeparam name="T">The type of the value to add or update in the dictionary.</typeparam>
-    /// <param name="value">The value to add or update in the dictionary.</param>
-    /// <returns>The value that was added or updated.</returns>
-    public T Put<T>(T value)
-    {
-        _dictionary[typeof(T)] = value!;
-        return value;
-    }
-
-    IEnumerator IEnumerable.GetEnumerator()
-    {
-        return GetEnumerator();
+        _dictionary[new TypeKey(typeof(T), tag)] = value;
     }
 
     /// <inheritdoc/>
-    public TypeDictionary Clone()
+    public TLimit GetOrAdd(TypeKey key, Func<TLimit> valueFactory)
     {
-        var clone = new TypeDictionary();
+        if (!_dictionary.TryGetValue(key, out var value))
+        {
+            value = valueFactory();
+            _dictionary[key] = value;
+        }
+        return value;
+    }
+
+    /// <inheritdoc/>
+    public bool Remove(TypeKey key)
+    {
+        return _dictionary.Remove(key);
+    }
+
+    /// <inheritdoc/>
+    public bool Remove<T>(Symbol tag)
+        where T : TLimit
+    {
+        return _dictionary.Remove(new TypeKey(typeof(T), tag));
+    }
+
+    /// <summary>
+    /// Creates a readonly wrapper around this <see cref="TypeDictionary{TLimit}"/>.
+    /// </summary>
+    /// <remarks>
+    /// Note that the readonly wrapper does not create a copy of the underlying dictionary, so changes to the original
+    /// dictionary will be reflected in the readonly wrapper.
+    /// </remarks>
+    /// <returns>A readonly wrapper around this dictionary.</returns>
+    public Readonly AsReadOnly()
+    {
+        return new Readonly(this);
+    }
+
+    /// <inheritdoc/>
+    public TypeDictionary<TLimit> Clone()
+    {
+        var clone = new TypeDictionary<TLimit>(comparer);
         foreach (var kvp in _dictionary)
         {
             clone._dictionary[kvp.Key] = kvp.Value;
         }
         return clone;
+    }
+
+    /// <inheritdoc/>
+    public IEnumerator<KeyValuePair<TypeKey, TLimit>> GetEnumerator()
+    {
+        return _dictionary.GetEnumerator();
+    }
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    /// <summary>
+    /// Readonly wrapper around a <see cref="TypeDictionary{TLimit}"/>.
+    /// </summary>
+    /// <param name="source">The source dictionary.</param>
+    public class Readonly(TypeDictionary<TLimit> source) : IReadOnlyTypeDictionary<TLimit>
+    {
+        /// <inheritdoc/>
+        public TLimit this[TypeKey key] => source[key];
+
+        /// <inheritdoc/>
+        public IEnumerable<TypeKey> Keys => source.Keys;
+
+        /// <inheritdoc/>
+        public IEnumerable<TLimit> Values => source.Values;
+
+        /// <inheritdoc/>
+        public int Count => source.Count;
+
+        /// <inheritdoc/>
+        public bool ContainsKey(TypeKey key)
+        {
+            return source.ContainsKey(key);
+        }
+
+        /// <inheritdoc/>
+#pragma warning disable CS8767 // IReadOnlyDictionary has missing nullability attributes
+        public bool TryGetValue(TypeKey key, [MaybeNullWhen(false)] out TLimit value)
+#pragma warning restore CS8767
+        {
+            return source.TryGetValue(key, out value);
+        }
+
+        /// <inheritdoc/>
+        public IEnumerator<KeyValuePair<TypeKey, TLimit>> GetEnumerator()
+        {
+            return source.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
     }
 }

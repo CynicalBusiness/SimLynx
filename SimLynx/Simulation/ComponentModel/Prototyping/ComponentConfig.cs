@@ -5,8 +5,8 @@ using SimLynx.Design.Prototyping.Blueprints;
 namespace SimLynx.Simulation.ComponentModel.Prototyping;
 
 /// <inheritdoc cref="IComponentConfig{TSubject, TComponent}"/>
-public class ComponentConfig<TSubject, TComponent>(PrototypeResolver<Component> prototypeResolver, string? givenName)
-    : PrototypeConfig<TSubject>(ComponentConfigSlot.GetConfigName(ComponentTypes.For<TComponent>(), givenName)),
+public class ComponentConfig<TSubject, TComponent>(PrototypeResolver<Component> prototypeResolver, Identifier name)
+    : PrototypeConfig<TSubject>(name),
         IComponentConfig<TSubject, TComponent>
     where TSubject : Component
     where TComponent : Component
@@ -43,6 +43,6 @@ public class ComponentConfig<TSubject, TComponent>(PrototypeResolver<Component> 
     public ComponentPrototype<TComponent> GetComponentPrototype()
     {
         return ComponentPrototype ??=
-            (ComponentPrototype<TComponent>)prototypeResolver.Resolve<TComponent>(Symbol.For(Name), false, null);
+            (ComponentPrototype<TComponent>)prototypeResolver.Resolve<TComponent>(Name, false, null);
     }
 }

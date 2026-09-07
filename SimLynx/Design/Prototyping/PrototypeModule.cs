@@ -64,10 +64,7 @@ public class PrototypeModule<TBaseSubject> : Module
         builder.RegisterType<PrototypeRegistry<TBaseSubject>.Factory>().AsSelf();
 
         // singleton-ish default instances for registries and compiled catalogs
-        builder
-            .Register(c => c.Resolve<PrototypeRegistry<TBaseSubject>.Factory>().Create())
-            .AsSelf()
-            .InstancePerDesign();
+        builder.Register(c => c.Resolve<PrototypeRegistry<TBaseSubject>.Factory>().Create()).AsSelf().DesignInstance();
         builder.Register(c => c.Resolve<PrototypeRegistry<TBaseSubject>>().Compile()).AsSelf().InstancePerSimulation();
 
         builder.RegisterType<PrototypeResolver<TBaseSubject>>().AsSelf();

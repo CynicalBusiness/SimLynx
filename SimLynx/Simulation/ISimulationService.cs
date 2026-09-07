@@ -3,9 +3,9 @@ using SimLynx.Core;
 namespace SimLynx.Simulation;
 
 /// <summary>
-/// Host for the SimLynx simulation, responsible for running the simulation loop.
+/// Primary service for the operation of SimLynx's simulation, responsible for running the simulation loop.
 /// </summary>
-public interface ISimulationHost
+public interface ISimulationService
 {
     /// <summary>
     /// The metronome used for the simulation's update loop.

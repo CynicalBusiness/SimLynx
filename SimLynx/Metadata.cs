@@ -13,7 +13,7 @@ namespace SimLynx;
 /// </remarks>
 public static class Metadata
 {
-    private static readonly ConditionalWeakTable<object, TypeDictionary> metadataTable = [];
+    private static readonly ConditionalWeakTable<object, ITypeDictionary<object>> metadataTable = new();
 
     /// <summary>
     /// Gets the metadata dictionary for the given object. If no metadata exists yet, a new dictionary is created and
@@ -21,11 +21,11 @@ public static class Metadata
     /// </summary>
     /// <param name="obj">The object to get metadata for.</param>
     /// <returns>The metadata dictionary associated with the object.</returns>
-    public static TypeDictionary Get(object obj)
+    public static ITypeDictionary<object> Get(object obj)
     {
         ArgumentNullException.ThrowIfNull(obj);
 
-        return metadataTable.GetOrCreateValue(obj);
+        return metadataTable.GetValue(obj, _ => new TypeDictionary<object>());
     }
 
     /// <summary>
@@ -34,7 +34,7 @@ public static class Metadata
     /// <param name="obj">The object to get metadata for.</param>
     /// <param name="metadata">The metadata dictionary associated with the object, if it exists.</param>
     /// <returns><c>true</c> if the metadata dictionary exists; otherwise, <c>false</c>.</returns>
-    public static bool TryGet(object obj, [NotNullWhen(true)] out TypeDictionary? metadata)
+    public static bool TryGet(object obj, [NotNullWhen(true)] out ITypeDictionary<object>? metadata)
     {
         ArgumentNullException.ThrowIfNull(obj);
 

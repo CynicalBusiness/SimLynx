@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using SimLynx.Core;
+using Autofac.Core;
 using SimLynx.Design.Prototyping.Blueprints;
 
 namespace SimLynx.Design.Prototyping.Properties;
@@ -58,208 +59,78 @@ public static class PropertyConfig
 /// <typeparam name="TValue">The type value of the property</typeparam>
 /// <param name="property">The property info for the prototype property.</param>
 public class PropertyConfig<TSubject, TValue>(PropertyInfo property)
-    : PrototypeConfig<TSubject>(property.Name),
-        IPropertyConfig<TSubject>,
-        IPropertyConfigState<TValue>
+    : PrototypeValueConfig<TSubject, TValue>(property.Name),
+        IPropertyConfig<TSubject, TValue>
     where TSubject : class, IPrototypeSubject
 {
-    private static readonly Lazy<ValueFunc?> defaultValueFunc = new(() =>
-    {
-        if (typeof(TValue).IsValueType)
-        {
-            return static () => default!;
-        }
-        var ctor = typeof(TValue).GetConstructor([]);
-        if (ctor is not null)
-        {
-            return () => (TValue)ctor.Invoke([]);
-        }
-
-        return null;
-    });
-
-    /// <summary>
-    /// Delegate for a configuration function.
-    /// </summary>
-    /// <param name="currentValue">The current value, if any.</param>
-    /// <returns>The configured value.</returns>
-    public delegate TValue ConfigurationFunc(TValue currentValue);
-
-    /// <summary>
-    /// Delegate for a value provider function.
-    /// </summary>
-    /// <returns>The provided value.</returns>
-    public delegate TValue ValueFunc();
-
-    private Maybe<ValueFunc> value = Maybe<ValueFunc>.None;
-    private readonly List<ConfigurationFunc> configurations = [];
-
     /// <inheritdoc/>
     public PropertyInfo Property { get; } = property;
 
     /// <inheritdoc/>
-    public Type ValueType => typeof(TValue);
-
-    /// <inheritdoc/>
-    public bool HasValue => value.HasValue;
-
-    /// <inheritdoc/>
-    public bool CanSetValue => HasReset || HasValue || defaultValueFunc.Value is not null;
-
-    /// <inheritdoc/>
-    public bool CanSetRequiredValue => HasValue;
-
-    /// <inheritdoc/>
-    public bool HasConfigurations => configurations.Count > 0;
-
-    /// <inheritdoc/>
-    public override bool IsEmpty => !HasValue && !HasConfigurations;
-
-    /// <inheritdoc/>
-    public override void Clear()
-    {
-        base.Clear();
-        configurations.Clear();
-        value = Maybe<ValueFunc>.None;
-    }
-
-    /// <inheritdoc/>
     public override bool Apply(IBlueprintBuilder<TSubject> builder)
     {
-        if (IsEmpty)
+        if (!TryCreateProvider(out var valueFunc))
         {
             return false;
         }
 
-        var didSetValue = false;
-
         var subjectParamExpr = Expression.Parameter(typeof(TSubject), "subject");
         var propertyExpr = Expression.Property(subjectParamExpr, Property);
-
-        var valueFunc = value.HasValue ? value.Value : defaultValueFunc.Value;
-        if (valueFunc is not null)
+        if (Property.IsNativeRequired)
         {
-            if (Property.IsNativeRequired)
-            {
-                // Autofac handles "native" required properties.
-                builder.InjectionParameters.Add(new SpecificPropertyProviderParameter(Property, (_, _) => valueFunc()));
-            }
-            else
-            {
-                // otherwise, we set the value afterward ourselves
-                var assignExpr = Expression.Assign(propertyExpr, Expression.Invoke(Expression.Constant(valueFunc)));
-                var assignAction = Expression.Lambda<Action<TSubject>>(assignExpr, subjectParamExpr).Compile();
-                builder.ConfigureAfterCreate((context, subject) => assignAction.Invoke(subject));
-            }
-            didSetValue = true;
+            // Autofac tries to handle "native required" properties, so we inject the default
+            // so Autofac doesn't complain about that property (since we're handling it)
+            builder.InjectionParameters.Add(new NamedPropertyParameter(Property.Name, default!));
         }
 
-        if (configurations.Count > 0)
+        var assignExpr = Expression.Assign(propertyExpr, Expression.Invoke(Expression.Constant(valueFunc)));
+
+        Expression configureExpr = HasConfigurations
+            ? Expression.Block(
+                Configurations
+                    .Select(c =>
+                        Expression.Assign(propertyExpr, Expression.Invoke(Expression.Constant(c), propertyExpr))
+                    )
+                    .Prepend(assignExpr)
+            )
+            : assignExpr;
+
+        var configureAction = Expression.Lambda<Action<TSubject>>(configureExpr, subjectParamExpr).Compile();
+        builder.ConfigureAfterCreate((context, subject) => configureAction.Invoke(subject));
+
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public override void Validate()
+    {
+        base.Validate();
+
+        if (Property.IsRequired && !HasValue)
         {
-            // always round-trip the property through the getter/setter to ensure any custom logic is applied.
-            var configExprs = configurations.Select(c =>
-                Expression.Assign(propertyExpr, Expression.Invoke(Expression.Constant(c), propertyExpr))
-            );
-
-            var bodyExpr = Expression.Block(configExprs);
-            var configAction = Expression.Lambda<Action<TSubject>>(bodyExpr, subjectParamExpr).Compile();
-
-            builder.ConfigureAfterCreate((context, subject) => configAction.Invoke(subject));
-            didSetValue = true;
-        }
-
-        return didSetValue;
-    }
-
-    /// <summary>
-    /// Adds a configuration function to this config, which will be applied in order when the config is applied to a blueprint.
-    /// </summary>
-    /// <param name="configuration">The configuration to add.</param>
-    public void Configure(ConfigurationFunc configuration)
-    {
-        ApplyAttribution();
-        configurations.Add(configuration);
-    }
-
-    /// <summary>
-    /// Adds a configuration action to this config, which will be applied in order when the config is applied to a blueprint.
-    /// </summary>
-    /// <param name="configuration">The configuration action to add.</param>
-    public void Configure(Action<TValue> configuration)
-    {
-        ApplyAttribution();
-        configurations.Add(value =>
-        {
-            configuration(value);
-            return value;
-        });
-    }
-
-    /// <summary>
-    /// Adds a configuration function that sets a new base value for the property when the config is applied to a blueprint.
-    /// </summary>
-    /// <remarks>
-    /// Because this configuration has no dependencies on the current value, all other configurations are cleared
-    /// and replaced with this one.
-    /// </remarks>
-    /// <param name="value"></param>
-    public void Configure(ValueFunc value)
-    {
-        Reset();
-        this.value = value;
-    }
-
-    void IPropertyConfig<TSubject>.Configure(PropertyConfig<TSubject, object?>.ValueFunc valueFunc)
-    {
-        Configure(() => (TValue)valueFunc()!);
-    }
-
-    void IPropertyConfig<TSubject>.Configure(PropertyConfig<TSubject, object?>.ConfigurationFunc configurationFunc)
-    {
-        Configure(value => (TValue)configurationFunc(value)!);
-    }
-
-    void IPropertyConfig<TSubject>.Configure(Action<object?> action)
-    {
-        Configure(value => action(value));
-    }
-
-    /// <inheritdoc cref="IPropertyConfig{TSubject}.CopyTo(IPropertyConfig{TSubject})"/>
-    public void CopyTo(PropertyConfig<TSubject, TValue> other)
-    {
-        CopyStateTo(other);
-    }
-
-    private void CopyStateTo(IPropertyConfig other)
-    {
-        if (other is not IPropertyConfigState<TValue> target)
-        {
-            throw new ArgumentException(
-                $"Cannot copy property config '{Name}' with value type {typeof(TValue)} to a config with value type {other.ValueType}.",
-                nameof(other)
+            throw new InvalidOperationException(
+                $"Property '{Property.Name}' of type '{typeof(TSubject).FullName}' is required and must be configured."
             );
         }
-
-        if (value.HasValue)
-        {
-            // setting a value also resets
-            var valueFunc = value.Value;
-            target.SetValue(() => valueFunc());
-        }
-        else if (HasReset)
-        {
-            target.Reset();
-        }
-
-        configurations.ForEach(configuration => target.AddConfiguration(value => configuration(value)));
     }
 
-    void IPropertyConfig<TSubject>.CopyTo(IPropertyConfig<TSubject> other) => CopyStateTo(other);
+    /// <inheritdoc/>
+    protected override bool TryGetDefaultProvider([MaybeNullWhen(false)] out Func<TValue> provider)
+    {
+        if (Property.IsRequired)
+        {
+            // required properties *must* explicitly provide a value
+            provider = null;
+            return false;
+        }
 
-    void IPropertyConfigState.CopyTo(IPropertyConfig other) => CopyStateTo(other);
+        return base.TryGetDefaultProvider(out provider);
+    }
 
-    void IPropertyConfigState<TValue>.SetValue(Func<TValue> value) => Configure(() => value());
-
-    void IPropertyConfigState<TValue>.AddConfiguration(Func<TValue, TValue> configuration) =>
-        Configure(value => configuration(value));
+    /// <inheritdoc/>
+    protected override IEnumerable<Expression> GetConfigurationExpressions(ParameterExpression valueExpr)
+    {
+        // we want to round-trip through the property, so don't apply them here
+        return [];
+    }
 }

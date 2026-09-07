@@ -10,5 +10,8 @@ internal class DiscoveryModule : Module
         base.Load(builder);
 
         builder.RegisterPhase<DiscoveryPhase>();
+
+        builder.RegisterGeneric(typeof(MetaType<>)).As(typeof(IMetaType<>)).DiscoveryInstance();
+        builder.RegisterType<MetaType.Resolver>().DiscoveryInstance();
     }
 }

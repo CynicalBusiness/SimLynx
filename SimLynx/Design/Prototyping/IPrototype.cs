@@ -19,9 +19,9 @@ namespace SimLynx.Design.Prototyping;
 public interface IPrototype
 {
     /// <summary>
-    /// The ID of this prototype.
+    /// The name of this prototype.
     /// </summary>
-    public Symbol Id { get; }
+    public Identifier Name { get; }
 
     /// <summary>
     /// The base prototype of this prototype, if any.
@@ -54,7 +54,7 @@ public interface IPrototype
     /// </summary>
     /// <param name="slotId">The ID of the slot to retrieve.</param>
     /// <returns>The config slot if found; otherwise, null.</returns>
-    public IPrototypeConfigSlot? this[Symbol slotId] { get; }
+    public IPrototypeConfigSlot? this[Identifier slotId] { get; }
 
     /// <summary>
     /// Tries to resolve a config slot on this prototype by its <paramref name="slotId"/>.
@@ -62,7 +62,7 @@ public interface IPrototype
     /// <param name="slotId">The ID of the slot to resolve.</param>
     /// <param name="slot">The resolved slot, if found.</param>
     /// <returns>True if the slot was found; otherwise, false.</returns>
-    public bool TryGetSlot(Symbol slotId, [MaybeNullWhen(false)] out IPrototypeConfigSlot slot);
+    public bool TryGetSlot(Identifier slotId, [MaybeNullWhen(false)] out IPrototypeConfigSlot slot);
 
     /// <summary>
     /// Tries to resolve a config slot on this prototype which supports the <typeparamref name="TConfig"/> type.

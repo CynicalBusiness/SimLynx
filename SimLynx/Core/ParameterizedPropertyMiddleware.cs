@@ -1,4 +1,5 @@
 using System;
+using Autofac;
 using Autofac.Core;
 using Autofac.Core.Resolving.Pipeline;
 
@@ -21,7 +22,7 @@ public class ParameterizedPropertyMiddleware(IPropertySelector selector) : IReso
 
         var instance = context.Instance!;
         var instanceType = instance.GetType();
-        var instanceMetaType = MetaType.For(instanceType);
+        var instanceMetaType = context.Resolve<MetaType.Resolver>().For(instanceType);
 
         foreach (var prop in instanceMetaType.Properties)
         {

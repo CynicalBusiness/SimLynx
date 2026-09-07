@@ -183,6 +183,70 @@ public static class PrototypingExtensions
         }
     }
 
+    extension(IPrototypeConfigSlot @this)
+    {
+        /// <inheritdoc cref="IPrototypeConfigSlot.this[Identifier]"/>
+        public IPrototypeConfig? Get(Identifier name)
+        {
+            return @this[name];
+        }
+    }
+
+    extension<TValue>(IPrototypeValueConfigOf<TValue> @this)
+    {
+        /// <summary>
+        /// Sets a constant value for this config.
+        /// </summary>
+        /// <param name="value">The constant value to set for this config.</param>
+        public void SetValue(TValue value)
+        {
+            @this.Configure(() => value);
+        }
+    }
+
+    extension<TSubject, TConfig>(IPrototypeConfigSlot<TSubject, TConfig> @this)
+        where TSubject : class, IPrototypeSubject
+        where TConfig : class, IPrototypeConfig<TSubject>
+    {
+        /// <inheritdoc cref="IPrototypeConfigSlot{TSubject, TConfig}.this[Identifier]"/>
+        public TConfig? Get(Identifier name)
+        {
+            return @this[name];
+        }
+
+        /// <param name="name">The name of the config.</param>
+        /// <param name="config">The configuration found/created, if any.</param>
+        /// <returns>If the configuration was found/created.</returns>
+        /// <inheritdoc cref="IPrototypeConfigSlot{TSubject, TConfig}.this[Identifier]"/>
+        public bool TryGet(Identifier name, [MaybeNullWhen(false)] out TConfig config)
+        {
+            config = @this[name];
+            return config is not null;
+        }
+
+        /// <summary>
+        /// Gets a config by name, creating it if it does not exist and can be created.
+        /// </summary>
+        /// <param name="name">The name of the config.</param>
+        /// <returns>The config, if found; otherwise, null.</returns>
+        public TConfig? Get(string name)
+        {
+            return @this[Identifier.Parse(name)];
+        }
+
+        /// <summary>
+        /// Attempts to get a config by name, creating it if it does not exist and can be created.
+        /// </summary>
+        /// <param name="name">The name of the config.</param>
+        /// <param name="config">The configuration found/created, if any.</param>
+        /// <returns>If the configuration was found/created.</returns>
+        public bool TryGet(string name, [MaybeNullWhen(false)] out TConfig config)
+        {
+            config = @this.Get(name);
+            return config is not null;
+        }
+    }
+
     extension(IPrototypeSubject @this)
     {
         /// <summary>

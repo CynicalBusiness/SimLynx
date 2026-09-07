@@ -7,16 +7,16 @@ namespace SimLynx.Design.Prototyping;
 /// <summary>
 /// Base class for prototype configs.
 /// </summary>
-/// <typeparam name="TSubject"></typeparam>
-/// <param name="name"></param>
-public abstract class PrototypeConfig<TSubject>(string name) : IPrototypeConfig<TSubject>
+/// <typeparam name="TSubject">The type of the prototype subject.</typeparam>
+/// <param name="name">The name of this configuration.</param>
+public abstract class PrototypeConfig<TSubject>(Identifier name) : IPrototypeConfig<TSubject>
     where TSubject : class, IPrototypeSubject
 {
     /// <inheritdoc/>
-    public string Name { get; } = name;
+    public Identifier Name { get; } = name;
 
     /// <inheritdoc/>
-    public abstract bool IsEmpty { get; }
+    public virtual bool IsEmpty => !HasReset && Attributions.Count == 0;
 
     /// <summary>
     /// Indicates whether this config has been explicitly reset to its default state.
@@ -43,14 +43,40 @@ public abstract class PrototypeConfig<TSubject>(string name) : IPrototypeConfig<
     {
         Clear();
         HasReset = true;
-        ApplyAttribution();
+        AttributeCurrent();
+    }
+
+    /// <inheritdoc/>
+    public virtual void Attribute(IContentProvider provider)
+    {
+        Attributions.Add(provider);
+    }
+
+    /// <inheritdoc/>
+    public virtual void CopyTo(IPrototypeConfig other)
+    {
+        if (HasReset)
+        {
+            other.Reset();
+        }
+
+        foreach (var attribution in Attributions)
+        {
+            other.Attribute(attribution);
+        }
+    }
+
+    /// <inheritdoc/>
+    public virtual void Validate()
+    {
+        // no-op by default
     }
 
     /// <summary>
     /// Applies the current content attribution context to this config.
     /// </summary>
-    protected virtual void ApplyAttribution()
+    protected virtual void AttributeCurrent()
     {
-        Attributions.Add(ContentAttributionRegistry.Current.GetForCaller());
+        Attribute(ContentAttributionRegistry.Current.GetForCaller());
     }
 }

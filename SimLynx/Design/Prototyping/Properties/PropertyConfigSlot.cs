@@ -1,5 +1,9 @@
+using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Reflection;
 using SimLynx.Design.Prototyping.Blueprints;
 
 namespace SimLynx.Design.Prototyping.Properties;
@@ -12,24 +16,62 @@ public static class PropertyConfigSlot
     /// <summary>
     /// The preferred slot ID for property configs.
     /// </summary>
-    public static readonly Symbol SLOT_ID = Symbol.For("Properties");
+    public static Identifier SlotId { get; } = "properties";
+
+    /// <summary>
+    /// Type key used to store cached configurable properties for subject types.
+    /// </summary>
+    public static TypeKey<IReadOnlyDictionary<string, PropertyInfo>> ConfigurablePropertiesKey { get; } =
+        new("configurableProperties");
 }
 
 /// <summary>
 /// Config slot for property configs, which configure properties of a subject type via reflection.
 /// </summary>
 /// <inheritdoc cref="PrototypeConfigSlot{TSubject, TConfig}"/>
-public class PropertyConfigSlot<TSubject>(IPrototype<TSubject> prototype)
+public class PropertyConfigSlot<TSubject>(IPrototype<TSubject> prototype, IMetaType<TSubject> subjectMetaType)
     : PrototypeConfigSlot<TSubject, IPropertyConfig<TSubject>>(prototype)
     where TSubject : class, IPrototypeSubject
 {
+    /// <summary>
+    /// Attempts to extract a property name from the given <paramref name="identifier"/>. Returns true only if the identifier
+    /// is unqualified and its specifier is a named symbol.
+    /// </summary>
+    /// <param name="identifier">The identifier to extract the property name from.</param>
+    /// <param name="propertyName">The extracted property name, if successful.</param>
+    /// <returns>True if the property name was successfully extracted; otherwise, false.</returns>
+    public static bool TryExtractPropertyName(Identifier identifier, [NotNullWhen(true)] out string? propertyName)
+    {
+        if (identifier.IsQualified || !identifier.Specifier.IsNamed)
+        {
+            // only unqualified named identifiers will map
+            propertyName = null;
+            return false;
+        }
+
+        propertyName = identifier.Specifier.Description;
+        return true;
+    }
+
+    /// <summary>
+    /// Gets an identifier for a property with the given <paramref name="propertyName"/>.
+    /// </summary>
+    /// <param name="propertyName">The name of the property.</param>
+    /// <returns>The identifier for the property.</returns>
+    public static Identifier GetPropertyIdentifier(string propertyName)
+    {
+        return new(propertyName);
+    }
+
     /// <inheritdoc/>
     public override void Configure(IBlueprintBuilder<TSubject> builder)
     {
+        ArgumentNullException.ThrowIfNull(builder, nameof(builder));
+
         var effectiveConfigs = GetEffectiveConfigs(builder);
 
         var unsetRequiredProperties = effectiveConfigs
-            .Values.Where(config => config.Property.IsRequired && !config.CanSetRequiredValue)
+            .Values.Where(config => config.Property.IsRequired && !config.HasValue)
             .ToArray();
 
         if (unsetRequiredProperties.Length > 0)
@@ -40,18 +82,13 @@ public class PropertyConfigSlot<TSubject>(IPrototype<TSubject> prototype)
             );
         }
 
-        foreach (var config in effectiveConfigs.Values)
-        {
-            config.Apply(builder);
-        }
+        base.Configure(builder);
     }
 
     /// <inheritdoc/>
-    protected override IPropertyConfig<TSubject>? Create(string name)
+    protected override IPropertyConfig<TSubject>? Create(Identifier name)
     {
-        var typeInfo = PrototypePropertyTypeInfo.For<TSubject>();
-
-        if (!typeInfo.TryGetProperty(name, out var property))
+        if (!TryExtractPropertyName(name, out var propertyName) || !TryGetProperty(propertyName, out var property))
         {
             return null;
         }
@@ -59,48 +96,23 @@ public class PropertyConfigSlot<TSubject>(IPrototype<TSubject> prototype)
         return PropertyConfig.Create<TSubject>(property);
     }
 
-    /// <summary>
-    /// Gets a dictionary of effective property configs for this slot, walking the prototype hierarchy as necessary.
-    /// </summary>
-    /// <remarks>
-    /// The configs are stabilized, meaning if the configs change in the relevant prototype, this dictionary will not
-    /// reflect those changes and can be used to configure a blueprint without being affected by changes in the prototype
-    /// hierarchy.
-    /// <br/>
-    /// Note: The effective configs are computed once per builder and cached. Calling this method again with the same
-    /// builder will return a reference to the same dictionary.
-    /// </remarks>
-    /// <returns>A dictionary of effective property configs, keyed by property name.</returns>
-    protected virtual Dictionary<string, IPropertyConfig<TSubject>> GetEffectiveConfigs(
-        IBlueprintBuilder<TSubject> builder
-    )
+    private bool TryGetProperty(string? propertyName, [MaybeNullWhen(false)] out PropertyInfo property)
     {
-        builder.Options.GetOrAdd<Dictionary<string, IPropertyConfig<TSubject>>>(out var effectiveConfigs);
-
-        var allConfigs = Prototype
-            .GetAncestorsFromRoot(includeSelf: true)
-            .SelectMany(prototype => prototype[Id]?.GetOwn() ?? [])
-            .OfType<IPropertyConfig>();
-
-        foreach (var config in allConfigs)
+        if (propertyName is null)
         {
-            if (!effectiveConfigs.TryGetValue(config.Name, out var effectiveConfig))
-            {
-                // var typeInfo = PrototypePropertyTypeInfo.For<TSubject>();
-                // if (!typeInfo.TryGetProperty(config.Name, out var property))
-                // {
-                //     continue;
-                // }
-
-                effectiveConfigs[config.Name] = effectiveConfig = PropertyConfig.Create<TSubject>(config.Property);
-            }
-
-            if (config is IPropertyConfigState configState)
-            {
-                configState.CopyTo(effectiveConfig);
-            }
+            property = null;
+            return false;
         }
 
-        return effectiveConfigs;
+        var props = subjectMetaType.Metadata.GetOrAdd(
+            PropertyConfigSlot.ConfigurablePropertiesKey,
+            () =>
+                subjectMetaType
+                    .Type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                    .Where(p => p.IsPrototypeConfigurable)
+                    .ToImmutableDictionary(p => p.Name)
+        );
+
+        return props.TryGetValue(propertyName, out property);
     }
 }

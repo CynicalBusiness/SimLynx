@@ -104,7 +104,7 @@ public class Prototyping
             var prototype = registry.Configure<TestSubject>(OwnPrototypeId);
 
             // valid: can get slot by ID or type, all should be the same instance
-            var slotById = prototype.GetSlot(PropertyConfigSlot.SLOT_ID);
+            var slotById = prototype.GetSlot(PropertyConfigSlot.SlotId);
             var slotByType = prototype.GetSlot<IPropertyConfig<TestSubject>>();
             var slotByBaseType = prototype.GetSlot<IPropertyConfig>();
 

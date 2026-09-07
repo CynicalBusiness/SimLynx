@@ -18,12 +18,12 @@ public class BlueprintBuilder<TSubject>(IPrototype<TSubject> prototype) : IBluep
     public List<Parameter> InjectionParameters { get; } = [];
 
     /// <inheritdoc/>
-    public TypeDictionary Options { get; } = [];
+    public ITypeDictionary<object> Options { get; } = new TypeDictionary<object>();
 
     /// <summary>
     /// Action invoked on each creation attempt but before the subject is created.
     /// </summary>
-    public List<BlueprintPreCreateHandler> BeforeCreateHandlers { get; } = [];
+    public List<BlueprintPreCreateHandlerWithParams> BeforeCreateHandlers { get; } = [];
 
     /// <summary>
     /// The list of actions to be invoked after a new instance of the subject is created.
@@ -43,9 +43,21 @@ public class BlueprintBuilder<TSubject>(IPrototype<TSubject> prototype) : IBluep
     }
 
     /// <inheritdoc/>
-    public void ConfigureBeforeCreate(BlueprintPreCreateHandler handler)
+    public void ConfigureBeforeCreate(BlueprintPreCreateHandlerWithParams handler)
     {
         BeforeCreateHandlers.Add(handler);
+    }
+
+    /// <inheritdoc/>
+    public void ConfigureBeforeCreate(BlueprintPreCreateHandler handler)
+    {
+        ConfigureBeforeCreate(
+            (ctx) =>
+            {
+                handler(ctx);
+                return [];
+            }
+        );
     }
 
     /// <inheritdoc/>
@@ -60,6 +72,6 @@ public class BlueprintBuilder<TSubject>(IPrototype<TSubject> prototype) : IBluep
     /// <param name="Scope">The Autofac scope used to resolve dependencies.</param>
     /// <param name="InstanceOptions">The instance-specific context dictionary for resolving dependencies.</param>
     /// <param name="SubjectType">The concrete type of subject being built.</param>
-    public record BuildContext(TypeDictionary InstanceOptions, ILifetimeScope Scope, Type SubjectType)
+    public record BuildContext(ITypeDictionary<object> InstanceOptions, ILifetimeScope Scope, Type SubjectType)
         : IBlueprintBuildContext;
 }

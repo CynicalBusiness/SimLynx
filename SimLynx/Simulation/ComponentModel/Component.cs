@@ -15,19 +15,16 @@ namespace SimLynx.Simulation.ComponentModel;
 /// their ECS counterparts. SimLynx components can somewhat be compared to narrow-scoped systems.
 /// </remarks>
 /// <param name="ctx">The builder passed to the component for configuration.</param>
-public abstract class Component(IComponentBuildContext ctx) : IPrototypeSubject
+public abstract class Component(IComponentContextInfo ctx) : IPrototypeSubject
 {
+    /// <summary>
+    /// The context of this component, which provides information about the component within its entity.
+    /// </summary>
+    protected IComponentContextInfo Context { get; } = ctx;
+
     /// <summary>
     /// The prototype of this component.
     /// </summary>
-    public IComponentPrototype Prototype { get; } = ctx.Prototype;
+    public IComponentPrototype Prototype => Context.Prototype;
     IPrototype IPrototypeSubject.Prototype => Prototype;
-
-    /// <summary>
-    /// The name of this component, if any.
-    /// </summary>
-    /// <remarks>
-    /// This property will be equal to <see cref="Symbol.Empty"/> if this component was not assigned a name.
-    /// </remarks>
-    public Symbol Name { get; } = ctx.Name;
 }

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -26,14 +27,15 @@ public static class MetaTypeExtensions
         /// <summary>
         /// A cached array of all properties on the underlying type.
         /// </summary>
-        public PropertyInfo[] Properties => @this.Metadata.GetOrAdd(PropertiesTag, () => @this.Type.GetProperties());
+        public ImmutableArray<PropertyInfo> Properties =>
+            @this.Metadata.GetOrAdd(PropertiesTag, () => @this.Type.GetProperties().ToImmutableArray());
 
         /// <summary>
         /// Gets a cached dictionary of all properties on the underlying type, keyed by property name.
         /// </summary>
         /// <returns>The dictionary of properties</returns>
         public IReadOnlyDictionary<string, PropertyInfo> PropertiesByName =>
-            @this.Metadata.GetOrAdd<IReadOnlyDictionary<string, PropertyInfo>>(
+            @this.Metadata.GetOrAdd(
                 PropertiesByNameTag,
                 () => new ReadOnlyDictionary<string, PropertyInfo>(@this.Type.GetProperties().ToDictionary(p => p.Name))
             );

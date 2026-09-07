@@ -4,11 +4,18 @@ using Autofac.Core;
 namespace SimLynx.Design.Prototyping.Blueprints;
 
 /// <summary>
-/// Handler delegate blueprints before the subject value is created.
+/// Handler delegate blueprints before the subject value is created, allowing for additional injection parameters to be
+/// provided.
 /// </summary>
 /// <param name="context">The context for the build operation.</param>
 /// <returns>Additional injection parameters to be used when creating the subject.</returns>
-public delegate IEnumerable<Parameter> BlueprintPreCreateHandler(IBlueprintBuildContext context);
+public delegate IEnumerable<Parameter> BlueprintPreCreateHandlerWithParams(IBlueprintBuildContext context);
+
+/// <summary>
+/// Handler delegate for blueprints before the subject value is created.
+/// </summary>
+/// <param name="context">The context for the build operation.</param>
+public delegate void BlueprintPreCreateHandler(IBlueprintBuildContext context);
 
 /// <summary>
 /// Handler delegate for blueprints after the subject value is created.

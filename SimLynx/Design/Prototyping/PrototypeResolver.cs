@@ -21,10 +21,14 @@ public class PrototypeResolver<TBaseSubject>(IComponentContext container)
     /// <param name="isAbstract">Indicates whether the prototype is abstract.</param>
     /// <param name="basePrototype">The base prototype, if any.</param>
     /// <returns>The resolved prototype.</returns>
-    public IPrototype<TSubject> Resolve<TSubject>(Symbol id, Maybe<bool> isAbstract, Maybe<IPrototype?> basePrototype)
+    public IPrototype<TSubject> Resolve<TSubject>(
+        Identifier id,
+        Maybe<bool> isAbstract,
+        Maybe<IPrototype?> basePrototype
+    )
         where TSubject : class, TBaseSubject
     {
-        IEnumerable<Parameter> parameters = [new TypedParameter(typeof(Symbol), id)];
+        IEnumerable<Parameter> parameters = [new TypedParameter(typeof(Identifier), id)];
         if (isAbstract.HasValue)
         {
             parameters = parameters.Append(new NamedPropertyParameter(nameof(IPrototype.IsAbstract), isAbstract.Value));

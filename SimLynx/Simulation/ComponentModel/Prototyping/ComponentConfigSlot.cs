@@ -1,5 +1,7 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using Autofac;
 using SimLynx.Design.Prototyping;
 using SimLynx.Design.Prototyping.Blueprints;
 
@@ -13,7 +15,7 @@ public static class ComponentConfigSlot
     /// <summary>
     /// The slot ID for the component config slot.
     /// </summary>
-    public static readonly Symbol SLOT_ID = Symbol.For("Components");
+    public static readonly Identifier SLOT_ID = "components";
 
     /// <summary>
     /// Attempts to parse a component config name into its component type and, if present, given name.
@@ -24,7 +26,7 @@ public static class ComponentConfigSlot
     /// <returns><c>true</c> if the config name was successfully parsed; otherwise, <c>false</c>.</returns>
     public static bool TryParseConfigName(
         string inputName,
-        [MaybeNullWhen(false)] out IComponentType componentType,
+        [MaybeNullWhen(false)] out Type componentType,
         out string? givenName
     )
     {
@@ -42,8 +44,11 @@ public static class ComponentConfigSlot
             givenName = inputName[(sepIdx + 1)..];
         }
 
-        componentType = ComponentTypes.Find(typeName);
-        return componentType is not null;
+        return AppDomain.CurrentDomain.TryFindType(
+            typeName,
+            type => type.IsAssignableTo<Component>(),
+            out componentType
+        );
     }
 
     /// <summary>
@@ -53,10 +58,10 @@ public static class ComponentConfigSlot
     /// <param name="componentType">The component type.</param>
     /// <param name="givenName">The given name of the component, if any.</param>
     /// <returns>The config name for the component config.</returns>
-    public static string GetConfigName(IComponentType componentType, string? givenName = null)
+    public static string GetConfigName(Type componentType, string? givenName = null)
     {
         var givenTag = givenName is null ? Symbol.Empty : Symbol.For(givenName);
-        return new TypeKey(componentType.Type, givenTag).ToString();
+        return new TypeKey(componentType, givenTag).ToString();
     }
 }
 
@@ -88,20 +93,20 @@ public class ComponentConfigSlot<TSubject>(
     }
 
     /// <inheritdoc/>
-    protected override IComponentConfig<TSubject>? Create(string name)
+    protected override IComponentConfig<TSubject>? Create(Identifier name)
     {
         if (!ComponentConfigSlot.TryParseConfigName(name, out var componentType, out var givenName))
         {
             return null;
         }
 
-        return _genericCreateMethod.MakeGenericMethod(componentType.Type).Invoke(this, [givenName])
+        return _genericCreateMethod.MakeGenericMethod(componentType).Invoke(this, [givenName])
             as IComponentConfig<TSubject>;
     }
 
     private ComponentConfig<TSubject, TComponent> CreateComponentConfig<TComponent>(string? givenName)
         where TComponent : Component
     {
-        return new ComponentConfig<TSubject, TComponent>(prototypeResolver, givenName);
+        return new ComponentConfig<TSubject, TComponent>(prototype, prototypeResolver, givenName);
     }
 }

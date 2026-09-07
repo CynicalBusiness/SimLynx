@@ -6,7 +6,7 @@ using SimLynx.Core.Phasing;
 
 namespace SimLynx.Simulation;
 
-internal class SimulationHost : ISimulationHost, IDisposable
+internal class SimulationHost : ISimulationService, IDisposable
 {
     private readonly IDisposable subscription;
 

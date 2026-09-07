@@ -11,7 +11,7 @@ public interface IBlueprintBuildContext
     /// <summary>
     /// Per-instance context options.
     /// </summary>
-    public TypeDictionary InstanceOptions { get; }
+    public ITypeDictionary<object> InstanceOptions { get; }
 
     /// <summary>
     /// The Autofac lifetime scope the subject is created in.

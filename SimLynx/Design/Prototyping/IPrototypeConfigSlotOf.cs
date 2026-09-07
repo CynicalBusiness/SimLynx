@@ -9,12 +9,12 @@ namespace SimLynx.Design.Prototyping;
 public interface IPrototypeConfigSlotOf<out TConfig> : IPrototypeConfigSlot
     where TConfig : IPrototypeConfig
 {
-    /// <inheritdoc cref="IPrototypeConfigSlot.this[string]"/>
-    public new TConfig? this[string name] { get; }
+    /// <inheritdoc cref="IPrototypeConfigSlot.this[Identifier]"/>
+    public new TConfig? this[Identifier name] { get; }
 
     /// <inheritdoc cref="IPrototypeConfigSlot.GetOwn"/>
     public new IEnumerable<TConfig> GetOwn();
 
-    IPrototypeConfig? IPrototypeConfigSlot.this[string name] => this[name];
+    IPrototypeConfig? IPrototypeConfigSlot.this[Identifier name] => this[name];
     IEnumerable<IPrototypeConfig> IPrototypeConfigSlot.GetOwn() => (IEnumerable<IPrototypeConfig>)GetOwn();
 }

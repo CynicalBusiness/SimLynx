@@ -14,6 +14,24 @@ public static class PrototypePropertyExtensions
         where TSubject : class, IPrototypeSubject
     {
         /// <summary>
+        /// Gets the configuration slot for properties of this prototype's subject.
+        /// </summary>
+        public PropertyConfigSlot<TSubject> Properties
+        {
+            get
+            {
+                if (
+                    !@this.TryGetSlot<IPropertyConfig<TSubject>>(out var rawSlot)
+                    || rawSlot is not PropertyConfigSlot<TSubject> slot
+                )
+                {
+                    throw new InvalidOperationException("Properties not valid on this prototype");
+                }
+                return slot;
+            }
+        }
+
+        /// <summary>
         /// Helper to try to get a property config for a given <paramref name="propertyName"/>. Returns false if the
         /// property does not exist or is not configurable.
         /// </summary>
@@ -76,6 +94,23 @@ public static class PrototypePropertyExtensions
                     $"The property '{propertyInfo.Name}' on {@this.SubjectType} (for prototype {@this}) is not configurable.",
                     nameof(propertySelector)
                 );
+        }
+    }
+
+    extension<TSubject>(IPrototypeConfigSlotOf<IPropertyConfig<TSubject>> @this)
+        where TSubject : class, IPrototypeSubject
+    {
+        /// <summary>
+        /// Gets a property config for the property specified by the given <paramref name="propertySelector"/>. Returns
+        /// null if the property does not exist or is not configurable.
+        /// </summary>
+        /// <typeparam name="TValue">The type of the property value.</typeparam>
+        /// <param name="propertySelector">An expression representing the property.</param>
+        /// <returns>The property configuration, if found; otherwise, null.</returns>
+        public IPropertyConfig<TSubject, TValue>? Get<TValue>(Expression<Func<TSubject, TValue>> propertySelector)
+        {
+            var prop = propertySelector.GetSelectedProperty();
+            return @this.Get(prop.Name) as IPropertyConfig<TSubject, TValue>;
         }
     }
 

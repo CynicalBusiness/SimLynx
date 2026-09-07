@@ -51,7 +51,7 @@ public class PrototypeConfigSlotCatalog
     /// <summary>
     /// Dictionary of all entries in this catalog, keyed by their unique slot ID.
     /// </summary>
-    public IReadOnlyDictionary<Symbol, Entry> EntriesById { get; }
+    public IReadOnlyDictionary<Identifier, Entry> EntriesById { get; }
 
     /// <summary>
     /// Dictionary of all entries in this catalog, grouped by config types they support.
@@ -71,7 +71,7 @@ public class PrototypeConfigSlotCatalog
     /// <param name="slot"></param>
     /// <returns></returns>
     public bool TryResolve<TSubject>(
-        Symbol slotId,
+        Identifier slotId,
         IPrototype<TSubject> prototype,
         [MaybeNullWhen(false)] out IPrototypeConfigSlotFor<TSubject> slot
     )
@@ -124,7 +124,7 @@ public class PrototypeConfigSlotCatalog
 
         foreach (var entry in entries)
         {
-            if (entry.TryResolve(prototype, out var slot) && slot.IsSupported)
+            if (entry.TryResolve(prototype, out var slot))
             {
                 yield return slot;
             }

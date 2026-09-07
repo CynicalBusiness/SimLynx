@@ -16,7 +16,7 @@ public class SymbolSet(IEnumerable<Symbol> symbols) :
 #endif
 {
     private readonly ImmutableSortedSet<Symbol> _symbols = ImmutableSortedSet.CreateRange(
-        Symbol.ValueComparer.Default,
+        Symbol.Comparer.Default,
         symbols
     );
 

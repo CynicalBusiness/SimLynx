@@ -15,11 +15,11 @@ public interface IBlueprintBuilder<out TSubject>
     /// <summary>
     /// Context options for all build operations, copied into each build's <see cref="IBlueprintBuildContext.InstanceOptions"/>.
     /// </summary>
-    public TypeDictionary Options { get; }
+    public ITypeDictionary<object> Options { get; }
 
     /// <summary>
     /// The list of injection parameters to be used when creating a new instance of the subject, prepended to those
-    /// returned by the handlers registered with <see cref="ConfigureBeforeCreate"/>.
+    /// returned by the handlers registered with <see cref="ConfigureBeforeCreate(BlueprintPreCreateHandler)"/>.
     /// </summary>
     public List<Parameter> InjectionParameters { get; }
 
@@ -43,6 +43,9 @@ public interface IBlueprintBuilder<out TSubject>
     /// Configures the blueprint to invoke the given <paramref name="handler"/> before each creation attempt but before the subject is created.
     /// </summary>
     /// <param name="handler">The handler to be invoked.</param>
+    public void ConfigureBeforeCreate(BlueprintPreCreateHandlerWithParams handler);
+
+    /// <inheritdoc cref="ConfigureBeforeCreate(BlueprintPreCreateHandlerWithParams)"/>
     public void ConfigureBeforeCreate(BlueprintPreCreateHandler handler);
 
     /// <summary>

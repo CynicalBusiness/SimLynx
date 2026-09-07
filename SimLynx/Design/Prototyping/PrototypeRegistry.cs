@@ -16,7 +16,7 @@ namespace SimLynx.Design.Prototyping;
 /// <typeparam name="TBaseSubject">The base type of the subject for which this registry is storing prototypes.</typeparam>
 public partial class PrototypeRegistry<TBaseSubject>(
     PrototypeResolver<TBaseSubject> resolver,
-    ILogger<PrototypeRegistry<TBaseSubject>>? logger
+    ILogger<PrototypeRegistry<TBaseSubject>> logger
 ) : IReadOnlyDictionary<Symbol, IPrototype<TBaseSubject>>
     where TBaseSubject : class, IPrototypeSubject
 {
@@ -129,7 +129,7 @@ public partial class PrototypeRegistry<TBaseSubject>(
 
             if (
                 baseId.HasValue
-                && (prototype.Base is null ? baseId.Value != Symbol.Empty : prototype.Base.Id != baseId.Value)
+                && (prototype.Base is null ? baseId.Value != Symbol.Empty : prototype.Base.Name != baseId.Value)
             )
             {
                 throw new ArgumentException(
@@ -199,7 +199,7 @@ public partial class PrototypeRegistry<TBaseSubject>(
     /// <param name="factoryFunc">The DI-provided injected factory function.</param>
     public class Factory(
         [KeyFilter(Factory.TRANSIENT_REGISTRY_NAME)] Func<PrototypeResolver<TBaseSubject>> factoryFunc,
-        ILogger<PrototypeRegistry<TBaseSubject>>? logger
+        ILogger<PrototypeRegistry<TBaseSubject>> logger
     )
     {
         /// <summary>
@@ -230,7 +230,7 @@ public partial class PrototypeRegistry<TBaseSubject>(
             Message = "[{registryId:X}] Prototype added: {prototypeId} (SubjectType: {subjectType}, IsAbstract: {isAbstract}, BaseId: {baseId})"
         )]
         internal static partial void PrototypeAdded(
-            ILogger? logger,
+            ILogger logger,
             int registryId,
             Symbol prototypeId,
             Type subjectType,
@@ -238,15 +238,15 @@ public partial class PrototypeRegistry<TBaseSubject>(
             Symbol? baseId
         );
 
-        internal static void PrototypeAdded(ILogger? logger, int registryId, IPrototype prototype)
+        internal static void PrototypeAdded(ILogger logger, int registryId, IPrototype prototype)
         {
             PrototypeAdded(
                 logger,
                 registryId,
-                prototype.Id,
+                prototype.Name,
                 prototype.SubjectType,
                 prototype.IsAbstract,
-                prototype.Base?.Id
+                prototype.Base?.Name
             );
         }
     }

@@ -3,7 +3,7 @@ using SimLynx.Design.Prototyping;
 namespace SimLynx.Simulation.ComponentModel.Prototyping;
 
 /// <summary>
-/// Generalized interface for a component config for a <see cref="Component"/> subject.
+/// Generalized config which attaches a component to a <typeparamref name="TSubject"/> component.
 /// </summary>
 /// <typeparam name="TSubject">The type of subject (parent) component</typeparam>
 public interface IComponentConfig<TSubject> : IPrototypeConfig<TSubject>
@@ -16,7 +16,7 @@ public interface IComponentConfig<TSubject> : IPrototypeConfig<TSubject>
 }
 
 /// <summary>
-/// Interface for a component config which attaches a <typeparamref name="TComponent"/> to a <typeparamref name="TSubject"/> component.
+/// A config which attaches a <typeparamref name="TComponent"/> component to a <typeparamref name="TSubject"/>.
 /// </summary>
 /// <typeparam name="TSubject">The type of subject (parent) component</typeparam>
 /// <typeparam name="TComponent">The type of component to attach</typeparam>

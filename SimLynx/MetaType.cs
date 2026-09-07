@@ -1,4 +1,5 @@
 using System;
+using Autofac;
 
 namespace SimLynx;
 
@@ -8,32 +9,35 @@ namespace SimLynx;
 public static class MetaType
 {
     /// <summary>
-    /// Gets/creates a <see cref="IMetaType{T}"/> for the <typeparamref name="T"/> type.
+    /// Helper to dynamically resolve <see cref="IMetaType"/> instances from the DI container.
     /// </summary>
-    /// <typeparam name="T">The type to get/create metadata for.</typeparam>
-    /// <returns>The <see cref="IMetaType{T}"/> instance for the specified type.</returns>
-    public static IMetaType<T> For<T>()
+    /// <param name="container">The container to resolve meta types from.</param>
+    public class Resolver(IComponentContext container)
     {
-        return Of<T>.Instance;
-    }
+        /// <summary>
+        /// Dynamically resolves the <see cref="IMetaType"/> for the given <paramref name="type"/>.
+        /// </summary>
+        /// <param name="type">The type to resolve metadata for.</param>
+        /// <returns>The <see cref="IMetaType"/> instance for the specified type.</returns>
+        public IMetaType For(Type type)
+        {
+            return (IMetaType)container.Resolve(typeof(IMetaType<>).MakeGenericType(type));
+        }
 
-    /// <summary>
-    /// Gets/creates a <see cref="IMetaType"/> for the specified <paramref name="type"/>.
-    /// </summary>
-    /// <param name="type">The type to get/create metadata for.</param>
-    /// <returns>The <see cref="IMetaType"/> instance for the specified type.</returns>
-    public static IMetaType For(Type type)
-    {
-        var genericType = typeof(Of<>).MakeGenericType(type);
-        var instanceProperty = genericType.GetProperty(nameof(Of<>.Instance))!;
-        return (IMetaType)instanceProperty.GetValue(null)!;
+        /// <summary>
+        /// Resolves the <see cref="IMetaType{T}"/> for the given <typeparamref name="T"/> type.
+        /// </summary>
+        /// <typeparam name="T">The type to resolve metadata for.</typeparam>
+        /// <returns>The <see cref="IMetaType{T}"/> instance for the specified type.</returns>
+        public IMetaType<T> For<T>()
+        {
+            return container.Resolve<IMetaType<T>>();
+        }
     }
+}
 
-    private class Of<T> : IMetaType<T>
-    {
-        public static Of<T> Instance { get; } = new();
-
-        public Type Type => typeof(T);
-        public TypeDictionary Metadata => new();
-    }
+internal class MetaType<T> : IMetaType<T>
+{
+    public Type Type => typeof(T);
+    public ITypeDictionary<object> Metadata => new TypeDictionary<object>();
 }

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace SimLynx.Core.Hooks;
 
@@ -47,7 +48,7 @@ public partial class Hook<TPayload> : IHook<TPayload>, IDisposable
     /// </summary>
     protected readonly IHookDeliveryStrategy deliveryStrategy;
 
-    private readonly ILogger<Hook<TPayload>>? logger;
+    private readonly ILogger<Hook<TPayload>> logger;
 
     /// <summary>
     /// Creates a new hook with the given delivery strategy and initial handlers.
@@ -72,7 +73,7 @@ public partial class Hook<TPayload> : IHook<TPayload>, IDisposable
             }
         }
 
-        this.logger = logger;
+        this.logger = logger ?? NullLogger<Hook<TPayload>>.Instance;
     }
 
     /// <summary>
@@ -206,7 +207,7 @@ public partial class Hook<TPayload> : IHook<TPayload>, IDisposable
             Level = LogLevel.Debug,
             Message = "Invoking hook: {hookName}<{payloadType}>"
         )]
-        internal static partial void HookInvoking(ILogger? logger, string hookName, Type payloadType);
+        internal static partial void HookInvoking(ILogger logger, string hookName, Type payloadType);
 
         /// <summary>
         /// Event ID for a hook having been invoked.
@@ -218,7 +219,7 @@ public partial class Hook<TPayload> : IHook<TPayload>, IDisposable
             Level = LogLevel.Debug,
             Message = "Hook invoked: {hookName}<{payloadType}>, took {elapsed}"
         )]
-        internal static partial void HookInvoked(ILogger? logger, string hookName, Type payloadType, TimeSpan elapsed);
+        internal static partial void HookInvoked(ILogger logger, string hookName, Type payloadType, TimeSpan elapsed);
 
         /// <summary>
         /// Event ID for an error occurring during hook invocation.
@@ -231,7 +232,7 @@ public partial class Hook<TPayload> : IHook<TPayload>, IDisposable
             Message = "Exception in hook: {hookName}<{payloadType}> (after {elapsed})"
         )]
         internal static partial void HookInvokeError(
-            ILogger? logger,
+            ILogger logger,
             string hookName,
             Type payloadType,
             TimeSpan elapsed,

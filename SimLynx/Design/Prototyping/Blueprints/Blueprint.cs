@@ -11,10 +11,10 @@ namespace SimLynx.Design.Prototyping.Blueprints;
 internal class Blueprint<TSubject>(BlueprintBuilder<TSubject> builder) : IBlueprint<TSubject>
     where TSubject : class, IPrototypeSubject
 {
-    private readonly BlueprintPreCreateHandler[] preCreateHandlers = [.. builder.BeforeCreateHandlers];
+    private readonly BlueprintPreCreateHandlerWithParams[] preCreateHandlers = [.. builder.BeforeCreateHandlers];
     private readonly BlueprintPostCreateHandler<TSubject>[] postCreateHandlers = [.. builder.AfterCreateHandlers];
 
-    private readonly TypeDictionary baseOptions = builder.Options.Clone();
+    private readonly TypeDictionary<object> baseOptions = new(builder.Options);
     private readonly Parameter[] injectionParameters = [.. builder.InjectionParameters];
 
     public IPrototype<TSubject> Prototype { get; } = builder.Prototype;

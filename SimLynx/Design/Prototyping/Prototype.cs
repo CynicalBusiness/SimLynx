@@ -12,20 +12,41 @@ namespace SimLynx.Design.Prototyping;
 /// <remarks>
 /// Contains default implementations and helpers suitable for most prototypes.
 /// </remarks>
-public class Prototype<TSubject>(Symbol id, PrototypeContext<TSubject> context) : IPrototype<TSubject>
+public class Prototype<TSubject> : IPrototype<TSubject>
     where TSubject : class, IPrototypeSubject
 {
     private readonly Dictionary<Type, IPrototypeConfigSlot<TSubject, IPrototypeConfig>?> typedSlotsCache = [];
+    private readonly IPrototypeContext context;
 
     /// <summary>
     /// Dictionary of config slots for this prototype, keyed by their slot ID.
     /// </summary>
-    protected Dictionary<Symbol, IPrototypeConfigSlot<TSubject, IPrototypeConfig>> Slots { get; } = [];
+    protected Dictionary<Identifier, IPrototypeConfigSlot<TSubject, IPrototypeConfig>> Slots { get; } = [];
 
     IEnumerable<IPrototypeConfigSlot> IPrototype.Slots => Slots.Values;
 
+    /// <summary>
+    /// Creates a new prototype with the given <paramref name="name"/> and <paramref name="context"/>.
+    /// </summary>
+    /// <param name="name">The name of the prototype.</param>
+    /// <param name="context">The context in which the prototype exists.</param>
+    public Prototype(Identifier name, IPrototypeContext context)
+    {
+        ArgumentNullException.ThrowIfNull(name, nameof(name));
+        ArgumentNullException.ThrowIfNull(context, nameof(context));
+
+        Name = name;
+        this.context = context;
+
+        foreach (var entry in context.ConfigSlotCatalog.Entries.Where(e => e.Def.Eager))
+        {
+            // just try to add it, letting it fail silently if not supported/found
+            TryGetSlot(entry.Def.Id, out _);
+        }
+    }
+
     /// <inheritdoc/>
-    public Symbol Id { get; } = id;
+    public Identifier Name { get; }
 
     /// <inheritdoc cref="IPrototype.Base"/>
     public IPrototype? Base
@@ -40,7 +61,7 @@ public class Prototype<TSubject>(Symbol id, PrototypeContext<TSubject> context) 
             if (value is not null && !value.SubjectType.IsAssignableFrom(SubjectType))
             {
                 throw new ArgumentException(
-                    $"Base prototype '{value.Id}' is of type {value.SubjectType}, which is not a base type of this prototype's subject type: {SubjectType}.",
+                    $"Base prototype '{value.Name}' is of type {value.SubjectType}, which is not a base type of this prototype's subject type: {SubjectType}.",
                     nameof(value)
                 );
             }
@@ -61,15 +82,15 @@ public class Prototype<TSubject>(Symbol id, PrototypeContext<TSubject> context) 
     /// <param name="slotId">The slot for which to retrieve the config.</param>
     /// <param name="configName">The name of the config to retrieve.</param>
     /// <returns>The config if found; otherwise, <c>null</c>.</returns>
-    public IPrototypeConfig? this[Symbol slotId, string configName] => this[slotId]?[configName];
+    public IPrototypeConfig? this[Identifier slotId, Identifier configName] => this[slotId]?[configName];
 
-    /// <inheritdoc cref="IPrototype.this[Symbol]"/>
-    public IPrototypeConfigSlot<TSubject, IPrototypeConfig>? this[Symbol slotId] => Slots.GetValueOrDefault(slotId);
+    /// <inheritdoc cref="IPrototype.this[Identifier]"/>
+    public IPrototypeConfigSlot<TSubject, IPrototypeConfig>? this[Identifier slotId] => Slots.GetValueOrDefault(slotId);
 
-    IPrototypeConfigSlot? IPrototype.this[Symbol slotId] => this[slotId];
+    IPrototypeConfigSlot? IPrototype.this[Identifier slotId] => this[slotId];
 
     /// <inheritdoc/>
-    public IBlueprint<TSubject> Compile()
+    public virtual IBlueprint<TSubject> Compile()
     {
         if (IsAbstract)
         {
@@ -77,14 +98,21 @@ public class Prototype<TSubject>(Symbol id, PrototypeContext<TSubject> context) 
         }
 
         var builder = new BlueprintBuilder<TSubject>(this);
+        Configure(builder);
+        return builder.Build();
+    }
 
-        var slots = GetAllSlots().ToArray();
+    /// <summary>
+    /// Applies this prototype's configuration to the given <paramref name="builder"/>.
+    /// </summary>
+    /// <param name="builder">The builder to apply to</param>
+    public virtual void Configure(IBlueprintBuilder<TSubject> builder)
+    {
+        var slots = GetAllSlots().ToList(); // eagerly materialize
         foreach (var slot in slots)
         {
             slot.Configure(builder);
         }
-
-        return builder.Build();
     }
 
     /// <summary>
@@ -106,7 +134,7 @@ public class Prototype<TSubject>(Symbol id, PrototypeContext<TSubject> context) 
 
     /// <inheritdoc cref="IPrototype.TryGetSlot"/>
     public bool TryGetSlot(
-        Symbol slotId,
+        Identifier slotId,
         [MaybeNullWhen(false)] out IPrototypeConfigSlot<TSubject, IPrototypeConfig> slot
     )
     {
@@ -131,7 +159,7 @@ public class Prototype<TSubject>(Symbol id, PrototypeContext<TSubject> context) 
         return true;
     }
 
-    bool IPrototype.TryGetSlot(Symbol slotId, [MaybeNullWhen(false)] out IPrototypeConfigSlot slot)
+    bool IPrototype.TryGetSlot(Identifier slotId, [MaybeNullWhen(false)] out IPrototypeConfigSlot slot)
     {
         if (TryGetSlot(slotId, out var typedSlot))
         {
@@ -195,6 +223,6 @@ public class Prototype<TSubject>(Symbol id, PrototypeContext<TSubject> context) 
     /// <inheritdoc/>
     public override string ToString()
     {
-        return $"{GetType().Name}<{SubjectType.Name}>{Id}";
+        return $"{GetType().Name}<{SubjectType.Name}>{Name}";
     }
 }

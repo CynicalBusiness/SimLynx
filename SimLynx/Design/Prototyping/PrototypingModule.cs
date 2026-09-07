@@ -1,5 +1,6 @@
 using Autofac;
 using SimLynx.Core;
+using SimLynx.Design.Prototyping.Parameters;
 using SimLynx.Design.Prototyping.Properties;
 
 namespace SimLynx.Design.Prototyping;
@@ -12,16 +13,23 @@ public sealed class PrototypingModule : Module
     /// <inheritdoc/>
     protected override void Load(ContainerBuilder builder)
     {
-        builder.RegisterType<PrototypeConfigSlotCatalog>().AsSelf().InstancePerDesign();
-
-        builder.RegisterGeneric(typeof(PrototypeContext<>)).AsSelf().InstancePerDependency();
+        builder.RegisterType<PrototypeConfigSlotCatalog>().AsSelf().DesignInstance();
+        builder.RegisterType<PrototypeContext>().AsSelf().InstancePerDependency();
         builder.RegisterGeneric(typeof(PrototypeResolver<>)).AsSelf().InstancePerDependency();
 
         builder.RegisterPrototypeConfigSlot(
-            new(PropertyConfigSlot.SLOT_ID, typeof(PropertyConfigSlot<>))
+            new(PropertyConfigSlot.SlotId, typeof(PropertyConfigSlot<>))
             {
                 ConfigTypes = [typeof(IPropertyConfig), typeof(IPropertyConfig<>)],
                 Priority = Priorities.High,
+                Eager = true,
+            }
+        );
+
+        builder.RegisterPrototypeConfigSlot(
+            new(ParameterConfigSlot.SlotId, typeof(ParameterConfigSlot<>))
+            {
+                ConfigTypes = [typeof(IParameterConfig), typeof(IParameterConfig<>)],
             }
         );
     }

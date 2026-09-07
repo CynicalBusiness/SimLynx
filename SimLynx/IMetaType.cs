@@ -6,7 +6,8 @@ namespace SimLynx;
 /// A "meta-type" is a helper which contains metadata about a particular type, such as cached reflection information,
 /// where retrieving that information on-the-fly would be expensive.
 /// <br/>
-/// To get/create a meta-type, use <see cref="MetaType.For{T}"/> or <see cref="MetaType.For(Type)"/>.
+/// To get/create a meta-type, inject <see cref="IMetaType{T}"/> of the desired type, or use
+/// <see cref="MetaType.Resolver"/> to dynamically resolve a meta-types.
 /// </summary>
 /// <remarks>
 /// This interface works by providing extensions to access the data within <see cref="Metadata"/> and that is the
@@ -22,7 +23,7 @@ public interface IMetaType
     /// <summary>
     /// The cache of metadata about this meta-type.
     /// </summary>
-    public TypeDictionary Metadata { get; }
+    public ITypeDictionary<object> Metadata { get; }
 }
 
 /// <summary>
